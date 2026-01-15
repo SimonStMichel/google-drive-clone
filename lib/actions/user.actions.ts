@@ -1,10 +1,12 @@
 "use server";
 
 import { appwriteConfig } from "../appwrite/config";
-import { createAdminClient } from "../appwrite";
+import { createAdminClient, createSessionClient } from "../appwrite";
 import { Query, ID } from "node-appwrite";
 import { parseStringify } from "../utils";
 import { cookies } from "next/headers";
+
+import { avatarPlaceholderUrl } from "@/constants";
 
 /**
  * 
@@ -71,7 +73,7 @@ export const createAccount = async ({ fullName, email }: { fullName: string; ema
             {
                 fullName,
                 email,
-                avatar: "https://icon-library.com/images/default-profile-icon/default-profile-icon-24.jpg",
+                avatar: avatarPlaceholderUrl,
                 accountId,
             },
         );
@@ -87,6 +89,7 @@ export const createAccount = async ({ fullName, email }: { fullName: string; ema
  * @returns 
  */
 export const verifySecret = async ({ accountId, password }: {accountId: string; password: string}) => {
+    
     try {
         const { account } = await createAdminClient();
 
@@ -104,3 +107,19 @@ export const verifySecret = async ({ accountId, password }: {accountId: string; 
         handleError(error, "Failed to verify OTP");
     }
 }
+
+export const getCurrentUser = async () => {
+    const { databases, account } = await createSessionClient();
+
+    const result = await account.get();
+
+    const user = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.usersCollectionId,
+        [Query.equal("accountId", result.$id)],
+    );
+
+    if(user.total <= 0) return null;
+
+    return parseStringify(user.documents[0]);
+};
