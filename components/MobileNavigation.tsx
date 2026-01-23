@@ -2,22 +2,25 @@
 
 import React, { useState } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { cn } from '@/lib/utils';
+
+import { navItems } from '@/constants';
+import { signOutUser } from '@/lib/actions/user.actions';
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Separator } from './ui/separator';
+import { Button } from './ui/button';
+
+import FileUploader from './FileUploader';
 
 interface Props {
     ownerId: string;
@@ -31,7 +34,7 @@ interface Props {
 const MobileNavigation = ({ ownerId, accountId, fullName, avatar, email }: Props) => {
 
   const [open, setOpen] = useState(false);
-  const pathanme = usePathname();
+  const pathname = usePathname();
 
   return (
     <header className="mobile-header">
@@ -49,27 +52,29 @@ const MobileNavigation = ({ ownerId, accountId, fullName, avatar, email }: Props
                   <p className="caption">{ email }</p>
                 </div>
               </div>
-              
+              <Separator className="mb-4 bg-light-200/20" />
             </SheetTitle>
-            <SheetDescription>
-              Make changes to your profile here. Click save when you&apos;re done.
-            </SheetDescription>
-          <div className="grid flex-1 auto-rows-min gap-6 px-4">
-            <div className="grid gap-3">
-              <Label htmlFor="sheet-demo-name">Name</Label>
-              <Input id="sheet-demo-name" defaultValue="Pedro Duarte" />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="sheet-demo-username">Username</Label>
-              <Input id="sheet-demo-username" defaultValue="@peduarte" />
-            </div>
+          <nav className="mobile-nav">
+            <ul className="mobile-nav-list">
+              {navItems.map(({ url, name, icon }) => (
+              <li className='lg:w-full'>
+                <Link key={name} href={url} className={cn("mobile-nav-item", pathname === url && "shad-active")}>
+                  <Image src={icon} alt={name} width={24} height={24} className={cn("nav-icon", pathname === url && "nav-icon-active")}/>
+                  <p>{ name }</p>
+                </Link>
+              </li>
+
+              ))}
+            </ul>
+          </nav>
+          <Separator className="my-5 bg-light-200/20"/>
+          <div className="flex flex-col justify-between gap-5 pb-5">
+            <FileUploader/>
+            <Button type="submit" className="mobile-sign-out-button" onClick={async () => await signOutUser}>
+              <Image src="/assets/icons/logout.svg" alt="logo" width={24} height={24}/>
+              <p>Logout</p>
+            </Button>
           </div>
-          <SheetFooter>
-            <Button type="submit">Save changes</Button>
-            <SheetClose asChild>
-              <Button variant="outline">Close</Button>
-            </SheetClose>
-          </SheetFooter>
         </SheetContent>
       </Sheet>
     </header>
