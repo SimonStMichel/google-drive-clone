@@ -24,7 +24,7 @@ interface UploadFileProps {
 const handleError = (error: unknown, message: string) => {
     console.log(error, message);
     throw error;
-}
+};
 
 /**
  * 
@@ -68,13 +68,13 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
     } catch (error) {
         handleError(error, "Failed to upload file");
     }
-}
+};
 
 /**
  * 
  * @param currentUser 
  */
-const createQueries = (currentUser: Models.Document ) => {
+const createQueries = (currentUser: Models.Document) => {
     const queries = [
         Query.or([
             Query.equal("owner", [currentUser.$id]),
@@ -83,7 +83,7 @@ const createQueries = (currentUser: Models.Document ) => {
     ];
 
     return queries;
-}
+};
 
 /**
  * 
@@ -94,7 +94,7 @@ export const getFiles = async () => {
     try {
         const currentUser = await getCurrentUser();
 
-        if(!currentUser) throw new Error("User not found");
+        if (!currentUser) throw new Error("User not found");
 
         const queries = createQueries(currentUser);
 
@@ -109,4 +109,4 @@ export const getFiles = async () => {
     } catch (error) {
         handleError(error, "Failed to get files");
     }
-}
+};
