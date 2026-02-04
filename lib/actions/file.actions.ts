@@ -136,3 +136,54 @@ export const renameFile = async ({ fileId, name, extension, path }: RenameFilePr
         handleError(error, "Failed to rename file");
     }
 };
+
+/**
+ * 
+ * @param param0 
+ * @returns 
+ */
+export const updateFileUsers = async ({ fileId, emails, path }: UpdateFileUsersProps) => {
+    const { databases } = await createAdminClient();
+
+    try {
+        const updatedFile = await databases.updateDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.filesCollectionId,
+            fileId,
+            {
+                users: emails,
+            },
+        );
+
+        revalidatePath(path);
+        return parseStringify(updatedFile);
+    } catch (error) {
+        handleError(error, "Failed to update users list");
+    }
+};
+
+/**
+ * 
+ * @param param0 
+ * @returns 
+ */
+export const deleteFile = async ({ fileId, bucketFileId, path }: DeleteFileProps) => {
+    const { databases, storage } = await createAdminClient();
+
+    try {
+        const deletedFile = await databases.updateDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.filesCollectionId,
+            fileId,
+        );
+
+        if (deletedFile) {
+            await storage.deleteFile(appwriteConfig.bucketId, bucketFileId);
+        }
+
+        revalidatePath(path);
+        return parseStringify({ status: "success" });
+    } catch (error) {
+        handleError(error, "Failed to update users list");
+    }
+};
