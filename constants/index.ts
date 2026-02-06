@@ -54,6 +54,33 @@ export const actionsDropdownItems = [
     },
 ];
 
+export const sortTypes = [
+    {
+        label: "Size (Newest)",
+        value: "$createdAt-desc",
+    },
+    {
+        label: "Size (Oldest)",
+        value: "$createdAt-asc",
+    },
+    {
+        label: "Name (A-Z)",
+        value: "name-asc",
+    },
+    {
+        label: "Name (Z-A)",
+        value: "name-desc",
+    },
+    {
+        label: "Size (Highest)",
+        value: "name-desc",
+    },
+    {
+        label: "Size (Lowest)",
+        value: "name-asc",
+    },
+];
+
 export const avatarPlaceholderUrl = "https://icon-library.com/images/default-profile-icon/default-profile-icon-24.jpg";
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
