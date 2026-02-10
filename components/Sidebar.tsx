@@ -18,6 +18,7 @@ interface Props {
 const Sidebar = ({ fullName, avatar, email }: Props) => {
 
     const pathname = usePathname();
+    const avatarUrl = avatar || avatarPlaceholderUrl;
 
     return (
         <aside className='sidebar'>
@@ -29,10 +30,10 @@ const Sidebar = ({ fullName, avatar, email }: Props) => {
             <nav className='sidebar-nav'>
                 <ul className="flex flex-1 flex-col gap-6">
                     {navItems.map(({ url, name, icon }) => (
-                        <li className='lg:w-full'>
+                        <li key={name} className='lg:w-full'>
                             <Link href={url} className={cn("sidebar-nav-item", pathname === url && "shad-active")}>
                                 <Image src={icon} alt={name} width={24} height={24} className={cn("nav-icon", pathname === url && "nav-icon-active")} />
-                                <span className='|| hidden lg:block'>{name}</span>
+                                <span className='hidden lg:block'>{name}</span>
                             </Link>
                         </li>
                     ))}
@@ -41,8 +42,8 @@ const Sidebar = ({ fullName, avatar, email }: Props) => {
             <Image src="/assets/images/files-2.png" alt="logo" width={506} height={418} className="w-full" />
 
             <div className="sidebar-user-info">
-                <Image src={avatarPlaceholderUrl} alt="Avatar" width={44} height={44} className="sidebar-user-avatar" />
-                <div className='|| hidden lg:block'>
+                <Image src={avatarUrl} alt="Avatar" width={44} height={44} className="sidebar-user-avatar" />
+                <div className='hidden lg:block'>
                     <p className="subtitle-2 capitalize">{fullName}</p>
                     <p className="caption">{email}</p>
                 </div>

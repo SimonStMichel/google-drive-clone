@@ -53,8 +53,8 @@ const OtpModal = ({ accountId, email }: { accountId: string; email: string }) =>
     };
 
     return (
-        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogContent className="shad-alert-dialog">
+        <AlertDialog open={isOpen}>
+            <AlertDialogContent className="shad-alert-dialog" onEscapeKeyDown={(e) => e.preventDefault()}>
                 <AlertDialogHeader className="relative flex justify-center">
                     <AlertDialogTitle className="h2 text-center">
                         We've sent you a code
@@ -76,20 +76,20 @@ const OtpModal = ({ accountId, email }: { accountId: string; email: string }) =>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <div className="flex w-full flex-col gap-4">
-                        <AlertDialogAction onClick={handleSubmit} className="shad-submit-btn h-12" type="button">
+                        <AlertDialogAction onClick={handleSubmit} disabled={isLoading || password.length !== 6} className="shad-submit-btn h-12" type="button">
                             Submit
                             {isLoading && (
                                 <Image src="/assets/icons/loader.svg" alt="loader" width={24} height={24} className="ml-2 animate-spin" />
                             )}
                         </AlertDialogAction>
                         <div className="subtitle-2 mt-2 text-center text-light-100">
-                            Didn't get the code ?
+                            Didn't post get the code ?
                             <Button type="button" variant="link" className="pl-1 text-brand" onClick={handleResendOtp}>Send another code</Button>
                         </div>
                     </div>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </AlertDialog >
     );
 };
 

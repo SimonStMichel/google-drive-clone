@@ -52,7 +52,7 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
 
   }, [ownerId, accountId, path]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps } = useDropzone({ onDrop });
 
   const handleRemoveFile = (e: React.MouseEvent<HTMLImageElement, MouseEvent>, fileName: string) => {
     e.stopPropagation();
@@ -68,7 +68,7 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
       </Button>
       {files.length > 0 && (
         <ul className="uploader-preview-list">
-          <h4 className="h4 || text-lightlime-100">Uploading</h4>
+          <h4 className="h4 text-light-100">Uploading</h4>
 
           {files.map((file, index) => {
             const { type, extension } = getFileType(file.name);
@@ -81,7 +81,7 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
                     {file.name}
                     <Image src="/assets/icons/file-loader.gif" alt="loader" width={80} height={26} />
                   </div>
-                </div>"
+                </div>
                 <Image src="/assets/icons/remove.svg" alt="remove" width={24} height={24} onClick={(e) => handleRemoveFile(e, file.name)} />
               </li>
             );

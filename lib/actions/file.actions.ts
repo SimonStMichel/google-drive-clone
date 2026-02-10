@@ -39,11 +39,13 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
 
         const bucketFile = await storage.createFile(appwriteConfig.bucketId, ID.unique(), inputFile);
 
+        const { name, extension, type } = getFileType(bucketFile.name);
+
         const fileDocument = {
-            type: getFileType(bucketFile.name).type,
-            name: bucketFile.name,
+            type,
+            name,
             url: constructFileUrl(bucketFile.$id),
-            extension: getFileType(bucketFile.name).extension,
+            extension,
             size: bucketFile.sizeOriginal,
             owner: ownerId,
             accountId,
@@ -123,11 +125,11 @@ export const getFiles = async ({ types = [], searchText = "", sort = "$createdAt
  * @param param0 
  * @returns 
  */
-export const renameFile = async ({ fileId, name, extension, path }: RenameFileProps) => {
+export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
     const { databases } = await createAdminClient();
 
     try {
-        const newName = `${name}.${extension}`;
+        const newName = `${name}`;
         const updatedFile = await databases.updateDocument(
             appwriteConfig.databaseId,
             appwriteConfig.filesCollectionId,
@@ -178,7 +180,7 @@ export const deleteFile = async ({ fileId, bucketFileId, path }: DeleteFileProps
     const { databases, storage } = await createAdminClient();
 
     try {
-        const deletedFile = await databases.updateDocument(
+        const deletedFile = await databases.deleteDocument(
             appwriteConfig.databaseId,
             appwriteConfig.filesCollectionId,
             fileId,

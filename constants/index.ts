@@ -12,7 +12,7 @@ export const navItems = [
     {
         name: "Images",
         icon: "/assets/icons/images.svg",
-        url: "/imaes"
+        url: "/images"
     },
     {
         name: "Media",

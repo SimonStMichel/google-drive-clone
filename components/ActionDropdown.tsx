@@ -53,7 +53,7 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
         let success = false;
 
         const actions = {
-            rename: () => renameFile({ fileId: file.$id, name, extension: file.extension, path }),
+            rename: () => renameFile({ fileId: file.$id, name, path }),
             share: () => updateFileUsers({ fileId: file.$id, emails, path }),
             delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
         };
@@ -89,7 +89,7 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
             <DialogContent className="shad-dialog button">
                 <DialogHeader className="flex flex-col gap-3">
                     <DialogTitle className="text-center text-light-100">{label}</DialogTitle>
-                    {value === "rename" && <Input type="text" value={name} onChange={(e) => setName(e.target.value)} />}
+                    {value === "rename" && <Input type="text" className="!rounded-[8px] text-light-100" value={name} onChange={(e) => setName(e.target.value)} />}
                     {value === "share" && <ShareInput file={file} onInputChange={setEmails} onRemove={handleRemoveUser} />}
                     {value === "details" && <FileDetails file={file} />}
                     {value === "delete" && (
@@ -130,7 +130,7 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
                             }
                         }}>
                             {actionItem.value === "download" ?
-                                <Link href={constructDownloadUrl(file.bucketFileId)} download={file.name} className="flex items-center gap-2">
+                                <Link href={`/api/download/${file.bucketFileId}`} download={`${file.name}.${file.extension}`} className="flex items-center gap-2">
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
                                     {actionItem.label}
                                 </Link> :

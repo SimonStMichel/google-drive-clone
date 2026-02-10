@@ -9,7 +9,7 @@ import { z } from "zod";
 import Image from "next/image";
 import Link from "next/link";
 
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createAccount, signInUser } from "@/lib/actions/user.actions";
@@ -20,7 +20,7 @@ type FormType = "sign-in" | "sign-up";
 const authFormSchema = (formType: FormType) => {
   return z.object({
     email: z.string().email(),
-    fullName: formType == "sign-up" ? z.string().min(2).max(50) : z.string().optional()
+    fullName: formType === "sign-up" ? z.string().min(2).max(50) : z.string().optional()
   });
 };
 
@@ -63,8 +63,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
     <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
-          <h1 className="form-title">{type == "sign-in" ? "Sign In" : "Sign Up"}</h1>
-          {type == "sign-up" && (<FormField
+          <h1 className="form-title">{type === "sign-in" ? "Sign In" : "Sign Up"}</h1>
+          {type === "sign-up" && (<FormField
             control={form.control}
             name="fullName"
             render={({ field }) => (
@@ -95,7 +95,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
             )}
           />
           <Button type="submit" className="form-submit-button" disabled={isLoading}>
-            {type == "sign-in" ? "Sign In" : "Sign Up"}
+            {type === "sign-in" ? "Sign In" : "Sign Up"}
             {isLoading && (
               <Image src="/assets/icons/loader.svg" alt="loader" width={24} height={24} className="ml-2 animate-spin" />
             )}
@@ -106,8 +106,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
           )}
 
           <div className="body-2 flex justify-center">
-            <p>{type == "sign-in" ? "Don't have an account?" : "Already have an account?"}</p>
-            <Link className="ml-1 font-medium text-brand" href={type == "sign-in" ? "/sign-up" : "/sign-in"}>{type == "sign-in" ? "Sign In" : "Sign Up"}</Link>
+            <p>{type === "sign-in" ? "Don't have an account?" : "Already have an account?"}</p>
+            <Link className="ml-1 font-medium text-brand" href={type === "sign-in" ? "/sign-up" : "/sign-in"}>{type === "sign-in" ? "Sign Up" : "Sign In"}</Link>
           </div>
         </form>
       </Form>

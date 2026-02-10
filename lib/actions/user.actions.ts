@@ -91,7 +91,6 @@ export const createAccount = async ({ fullName, email }: { fullName: string; ema
  * @returns 
  */
 export const verifySecret = async ({ accountId, password }: { accountId: string; password: string }) => {
-
     try {
         const { account } = await createAdminClient();
 
