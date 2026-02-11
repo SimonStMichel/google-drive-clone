@@ -11,9 +11,10 @@ import { redirect } from "next/navigation";
 import { avatarPlaceholderUrl } from "@/constants";
 
 /**
+ * Retrieves a user from the database by their email address.
  * 
- * @param email 
- * @returns 
+ * @param {string} email - The email address of the user to retrieve
+ * @returns {Promise<any | null>} The user if found, or null if no user exists with that email
  */
 const getUserByEmail = async (email: string) => {
     const { databases } = await createAdminClient();
@@ -28,9 +29,11 @@ const getUserByEmail = async (email: string) => {
 };
 
 /**
+ * Handles errors by logging them to the console and throwing them.
  * 
- * @param error 
- * @param message 
+ * @param {unknown} error - The error object to handle
+ * @param {string} message - Message about the error context
+ * @throws {unknown} Re-throws the original error
  */
 const handleError = (error: unknown, message: string) => {
     console.log(error, message);
@@ -38,9 +41,12 @@ const handleError = (error: unknown, message: string) => {
 };
 
 /**
+ * Sends an OTP (One-Time Password) to the specified email address.
+ * Uses Appwrite's email token generation to create a secure OTP.
  * 
- * @param email 
- * @returns 
+ * @param {string} email - The email address to send the OTP to
+ * @returns {Promise<string>} The unique user ID associated with the OTP session
+ * @throws {Error} If OTP generation fails
  */
 export const sendEmailOTP = async ({ email }: { email: string }) => {
     const { account } = await createAdminClient();
@@ -55,9 +61,14 @@ export const sendEmailOTP = async ({ email }: { email: string }) => {
 };
 
 /**
+ * Creates a new user account with the provided name and email.
+ * Sends an OTP to verify the email and stores the user document in the database.
+ * If the user already exists, only updates the verification status.
  * 
- * @param fullName 
- * @param email
+ * @param {string} fullName - The full name of the user
+ * @param {string} email - The email address of the user
+ * @returns {Promise<{accountId: string}>} An object containing the account ID
+ * @throws {Error} If OTP generation fails or database operation fails
  */
 export const createAccount = async ({ fullName, email }: { fullName: string; email: string }) => {
     const existingUser = await getUserByEmail(email);
@@ -85,10 +96,13 @@ export const createAccount = async ({ fullName, email }: { fullName: string; ema
 };
 
 /**
+ * Verifies the OTP and creates an authenticated session for the user.
+ * Sets a secure HTTP-only cookie containing the session token.
  * 
- * @param accountId 
- * @param password 
- * @returns 
+ * @param {string} accountId - The unique account ID from the OTP creation
+ * @param {string} password - The OTP code that was sent to the user's email
+ * @returns {Promise<{sessionId: string}>} An object containing the session ID
+ * @throws {Error} If OTP verification fails
  */
 export const verifySecret = async ({ accountId, password }: { accountId: string; password: string }) => {
     try {
@@ -110,8 +124,11 @@ export const verifySecret = async ({ accountId, password }: { accountId: string;
 };
 
 /**
+ * Retrieves the currently authenticated user's profile information.
+ * Uses the session cookie to identify and fetch the user's data.
  * 
- * @returns 
+ * @returns {Promise<any | null>} The current user's document data if authenticated, or null if not found
+ * @throws {void} Silently catches errors and returns null on failure
  */
 export const getCurrentUser = async () => {
     try {
@@ -134,8 +151,11 @@ export const getCurrentUser = async () => {
 };
 
 /**
+ * Signs out the current user by deleting their session and clearing cookies.
+ * Redirects the user to the sign-in page after logout.
  * 
- * @returns 
+ * @returns {Promise<void>} No return value; redirects on completion
+ * @throws {Error} If session deletion fails
  */
 export const signOutUser = async () => {
     const { account } = await createSessionClient();
@@ -151,8 +171,12 @@ export const signOutUser = async () => {
 };
 
 /**
+ * Signs in an existing user by sending an OTP to their email address.
+ * Verifies the user exists before sending the OTP.
  * 
- * @param email 
+ * @param {string} email - The email address of the user to sign in
+ * @returns {Promise<{accountId: string}>} An object containing the user's account ID
+ * @throws {Error} If user not found or OTP sending fails
  */
 export const signInUser = async ({ email }: { email: string }) => {
     try {

@@ -17,9 +17,11 @@ interface UploadFileProps {
 }
 
 /**
+ * Handles errors by logging them to the console and throwing them.
  * 
- * @param error 
- * @param message 
+ * @param {unknown} error - The error object to handle
+ * @param {string} message - A descriptive message about the error context
+ * @throws {unknown} Re-throws the original error
  */
 const handleError = (error: unknown, message: string) => {
     console.log(error, message);
@@ -27,9 +29,16 @@ const handleError = (error: unknown, message: string) => {
 };
 
 /**
+ * Uploads a file to Appwrite storage and creates a corresponding database document.
+ * Automatically handles file type detection and URL construction.
+ * Cleans up storage if database document creation fails.
  * 
- * @param param0 
- * @returns 
+ * @param {File} file - The file object to upload
+ * @param {string} ownerId - The ID of the file owner
+ * @param {string} accountId - The account ID associated with the file
+ * @param {string} path - The path to revalidate after upload
+ * @returns {Promise<any>} The created file document with metadata
+ * @throws {Error} If upload or document creation fails
  */
 export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileProps) => {
     const { storage, databases } = await createAdminClient();
@@ -73,8 +82,15 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
 };
 
 /**
+ * Creates Appwrite queries for filtering and sorting files.
+ * Builds queries for file ownership and shared access, with optional filtering by type, name, and sort order.
  * 
- * @param currentUser 
+ * @param {Models.Document} currentUser - The current user document
+ * @param {string[]} types - Array of file types to filter by
+ * @param {string} searchText - Text to search in file names
+ * @param {string} sort - Sort key and order in format "key-order" (e.g., "$createdAt-desc")
+ * @param {number} [limit] - Optional maximum number of results
+ * @returns {Query[]} Array of Appwrite Query objects
  */
 const createQueries = (currentUser: Models.Document, types: string[], searchText: string, sort: string, limit?: number) => {
     const queries = [
@@ -95,7 +111,15 @@ const createQueries = (currentUser: Models.Document, types: string[], searchText
 };
 
 /**
+ * Retrieves files for the current user based on filter criteria.
+ * Returns files owned by the user or shared with them.
  * 
+ * @param {FileType[]} types - Array of file types to filter by (document, image, video, audio, other)
+ * @param {string} [searchText] - Optional text to search in file names
+ * @param {string} [sort] - Optional sort key and order (default: "$createdAt-desc")
+ * @param {number} [limit] - Optional maximum number of files to retrieve
+ * @returns {Promise<any>} Object containing array of file documents and metadata
+ * @throws {Error} If user not found or database query fails
  */
 export const getFiles = async ({ types = [], searchText = "", sort = "$createdAt-desc", limit }: GetFilesProps) => {
     const { databases } = await createAdminClient();
@@ -121,9 +145,14 @@ export const getFiles = async ({ types = [], searchText = "", sort = "$createdAt
 };
 
 /**
+ * Renames an existing file in the database.
+ * Updates the file document and revalidates the specified path.
  * 
- * @param param0 
- * @returns 
+ * @param {string} fileId - The ID of the file to rename
+ * @param {string} name - The new name for the file
+ * @param {string} path - The path to revalidate after rename
+ * @returns {Promise<any>} The updated file document
+ * @throws {Error} If update fails
  */
 export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
     const { databases } = await createAdminClient();
@@ -147,9 +176,14 @@ export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
 };
 
 /**
+ * Updates the list of users with whom a file is shared.
+ * Replaces the entire users list with the provided email addresses.
  * 
- * @param param0 
- * @returns 
+ * @param {string} fileId - The ID of the file to update
+ * @param {string[]} emails - Array of email addresses to share the file with
+ * @param {string} path - The path to revalidate after update
+ * @returns {Promise<any>} The updated file document
+ * @throws {Error} If update fails
  */
 export const updateFileUsers = async ({ fileId, emails, path }: UpdateFileUsersProps) => {
     const { databases } = await createAdminClient();
@@ -172,9 +206,14 @@ export const updateFileUsers = async ({ fileId, emails, path }: UpdateFileUsersP
 };
 
 /**
+ * Deletes a file from both the database and storage.
+ * Removes the file document from the database and the actual file from storage.
  * 
- * @param param0 
- * @returns 
+ * @param {string} fileId - The ID of the file document to delete
+ * @param {string} bucketFileId - The ID of the file in storage bucket
+ * @param {string} path - The path to revalidate after deletion
+ * @returns {Promise<{status: string}>} Object with status indicating success
+ * @throws {Error} If deletion fails
  */
 export const deleteFile = async ({ fileId, bucketFileId, path }: DeleteFileProps) => {
     const { databases, storage } = await createAdminClient();
@@ -198,8 +237,18 @@ export const deleteFile = async ({ fileId, bucketFileId, path }: DeleteFileProps
 };
 
 /**
+ * Calculates total storage space used by the current user across all file types.
+ * Returns detailed breakdown of space used by document, image, video, audio, and other file types.
  * 
- * @returns 
+ * @returns {Promise<any>} Object containing:
+ *   - image: { size, latestDate }
+ *   - document: { size, latestDate }
+ *   - video: { size, latestDate }
+ *   - audio: { size, latestDate }
+ *   - other: { size, latestDate }
+ *   - used: Total bytes used
+ *   - all: Total available bytes (2GB)
+ * @throws {Error} If user not authenticated or database query fails
  */
 export async function getTotalSpaceUsed() {
     try {
