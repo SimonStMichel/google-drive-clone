@@ -315,7 +315,7 @@
   }
 
   .share-input-field {
-    @apply body-2 shad-no-focus h-[52px] w-full rounded-full border px-4 shadow-drop-1 !important;
+    @apply body-2 text-light-100 shad-no-focus h-[52px] w-full rounded-full border px-4 shadow-drop-1 !important;
   }
 
   .share-remove-user {

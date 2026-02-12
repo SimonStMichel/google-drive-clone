@@ -4,7 +4,7 @@ import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
 
 import { InputFile } from "node-appwrite/file";
-import { ID, Query, Models } from "node-appwrite";
+import { ID, Query, Models, Permission, Role } from "node-appwrite";
 import { constructFileUrl, getFileType, parseStringify } from "../utils";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./user.actions";
@@ -46,7 +46,15 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
     try {
         const inputFile = InputFile.fromBuffer(file, file.name);
 
-        const bucketFile = await storage.createFile(appwriteConfig.bucketId, ID.unique(), inputFile);
+        const bucketFile = await storage.createFile(
+            appwriteConfig.bucketId,
+            ID.unique(),
+            inputFile,
+            [
+                Permission.read(Role.user(accountId)),   // uploader
+                Permission.update(Role.user(accountId)),
+                Permission.delete(Role.user(accountId))
+            ]);
 
         const { name, extension, type } = getFileType(bucketFile.name);
 

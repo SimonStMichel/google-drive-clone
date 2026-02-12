@@ -13,7 +13,7 @@ import { Button } from "./ui/button";
 
 const ImageThumbnail = ({ file }: { file: Models.Document }) => (
     <div className="file-details-thumbnail">
-        <Thumbnail type={file.type} extension={file.extension} />
+        <Thumbnail type={file.type} extension={file.extension} url={file.url} />
         <div className="flex flex-col">
             <p className="subtitle-2 mb-1 text-light-100">{file.name}</p>
             <FormattedDateTime date={file.$createdAt} className="caption" />
