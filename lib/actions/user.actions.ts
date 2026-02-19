@@ -49,10 +49,15 @@ const handleError = (error: unknown, message: string) => {
  * @throws {Error} If OTP generation fails
  */
 export const sendEmailOTP = async ({ email }: { email: string }) => {
+
     const { account } = await createAdminClient();
 
     try {
         const session = await account.createEmailToken(ID.unique(), email);
+
+        console.log(email);
+
+
 
         return session.userId;
     } catch (error) {

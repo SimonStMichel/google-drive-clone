@@ -77,9 +77,9 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
               <li key={`${file.name}-${index}`} className="uploader-preview-item">
                 <div className="flex items-center gap-3">
                   <Thumbnail type={type} extension={extension} url={convertFileToUrl(file)} />
-                  <div className="preview-item-name">
-                    {file.name}
-                    <Image src="/assets/icons/file-loader.gif" alt="loader" width={80} height={26} />
+                  <div>
+                    <span className="preview-item-name">{file.name}</span>
+                    <Image unoptimized src="/assets/icons/file-loader.gif" alt="loader" width={80} height={26} />
                   </div>
                 </div>
                 <Image src="/assets/icons/remove.svg" alt="remove" width={24} height={24} onClick={(e) => handleRemoveFile(e, file.name)} />

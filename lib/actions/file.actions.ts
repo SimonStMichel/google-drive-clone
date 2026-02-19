@@ -51,7 +51,7 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
             ID.unique(),
             inputFile,
             [
-                Permission.read(Role.user(accountId)),   // uploader
+                Permission.read(Role.user(accountId)),
                 Permission.update(Role.user(accountId)),
                 Permission.delete(Role.user(accountId))
             ]);
