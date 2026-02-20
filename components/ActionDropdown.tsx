@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 
 import { actionsDropdownItems } from "@/constants";
-import { constructDownloadUrl } from "@/lib/utils";
 import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
 
 import { Models } from "node-appwrite";
@@ -42,7 +41,7 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
         setIsDropdownOpen(false);
         setAction(null);
         setName(file.name);
-        // setEmails([]);
+        setEmails([]);
     };
 
     const handleAction = async () => {

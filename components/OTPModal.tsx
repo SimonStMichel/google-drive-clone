@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/input-otp";
 import { Button } from "@/components/ui/button";
 
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -63,7 +65,7 @@ const OtpModal = ({ accountId, email }: { accountId: string; email: string }) =>
                     <AlertDialogDescription className="subtitle-2 text-center text-light-100">
                         We've sent an email to <span className="pl-1 text-brand">{email}</span>, please enter the 6 digits code below to verify your account.
                     </AlertDialogDescription>
-                    <InputOTP maxLength={6} value={password} onChange={setPassword}>
+                    <InputOTP maxLength={6} value={password} onChange={setPassword} pattern={REGEXP_ONLY_DIGITS}>
                         <InputOTPGroup className="shad-otp">
                             <InputOTPSlot index={0} className="shad-otp-slot" />
                             <InputOTPSlot index={1} className="shad-otp-slot" />

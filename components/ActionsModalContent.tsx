@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 import { Models } from "node-appwrite";
@@ -28,6 +30,18 @@ const DetailRow = ({ label, value }: { label: string; value: string }) => (
     </div>
 );
 
+const SharedUsersRow = ({ label, values }: { label: string; values: string[] }) => (
+    <div className="flex">
+        <p className="file-details-label text-left">{label}</p>
+        <div>
+            {values.map((value) => (
+                <p key={value} className="file-details-value text-left text-light-200">{value}</p>
+            )
+            )}
+        </div>
+    </div>
+);
+
 export const FileDetails = ({ file }: { file: Models.Document }) => {
     return (
         <>
@@ -37,6 +51,9 @@ export const FileDetails = ({ file }: { file: Models.Document }) => {
                 <DetailRow label="Size:" value={convertFileSize(file.size)} />
                 <DetailRow label="Owner:" value={file.owner.fullName} />
                 <DetailRow label="Last edit:" value={formatDateTime(file.$updatedAt)} />
+                {file.users.length > 0 && (
+                    <SharedUsersRow label="Sharing :" values={file.users} />
+                )}
             </div>
         </>
     );

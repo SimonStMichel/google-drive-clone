@@ -12,7 +12,7 @@ import FormattedDateTime from "./FormattedDateTime";
 
 const Card = ({ file }: { file: Models.Document }) => {
   return (
-    <Link href={file.url} target="_blank" className="file-card">
+    <Link href={`/api/files/${file.$id}`} target="_blank" className="file-card">
       <div className="flex justify-between">
         <Thumbnail type={file.type} extension={file.extension} url={file.url} className="!size-20" imageClassName="!size-11" />
         <div className="flex flex-col items-end justify-between">
