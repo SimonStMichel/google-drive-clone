@@ -24,14 +24,14 @@ const ImageThumbnail = ({ file }: { file: Models.Document }) => (
 );
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
-    <div className="flex">
+    <div className="flex flex-col sm:flex-row">
         <p className="file-details-label text-left">{label}</p>
         <p className="file-details-value text-left text-light-200">{value}</p>
     </div>
 );
 
 const SharedUsersRow = ({ label, values }: { label: string; values: string[] }) => (
-    <div className="flex">
+    <div className="flex flex-col sm:flex-row">
         <p className="file-details-label text-left">{label}</p>
         <div>
             {values.map((value) => (
@@ -47,12 +47,12 @@ export const FileDetails = ({ file }: { file: Models.Document }) => {
         <>
             <ImageThumbnail file={file} />
             <div className="space-y-4 px-2 pt-2">
-                <DetailRow label="Format:" value={file.extension} />
-                <DetailRow label="Size:" value={convertFileSize(file.size)} />
-                <DetailRow label="Owner:" value={file.owner.fullName} />
-                <DetailRow label="Last edit:" value={formatDateTime(file.$updatedAt)} />
+                <DetailRow label="Format :" value={file.extension} />
+                <DetailRow label="Size :" value={convertFileSize(file.size)} />
+                <DetailRow label="Owner: " value={file.owner.fullName} />
+                <DetailRow label="Last edit :" value={formatDateTime(file.$updatedAt)} />
                 {file.users.length > 0 && (
-                    <SharedUsersRow label="Sharing :" values={file.users} />
+                    <SharedUsersRow label="Sharing to :" values={file.users} />
                 )}
             </div>
         </>
@@ -73,10 +73,8 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
                 <p className="subtitle-2 pl-1 text-light-100">Share file with other users</p>
                 <Input type="email" placeholder="Enter" className="share-input-field" onChange={(e) => onInputChange(e.target.value.trim().split(","))} />
                 <div className="pt-4">
-                    <div className="flex justify-between">
-                        <p className="subtitle-2 text-light-100">Shared with</p>
-                        <p className="subtitle-2 text-light-200">{file.users.length} users</p>
-
+                    <div className="">
+                        <p className="subtitle-2 text-light-100">Shared with <span className="text-light-200">{file.users.length} user{file.users.length > 1 ? "s" : ""}</span></p>
                         <ul className="pt-2">
                             {file.users.map((email: string) => (
                                 <li key={email} className="flex items-center justify-between gap-2">

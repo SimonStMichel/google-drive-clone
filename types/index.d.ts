@@ -31,7 +31,7 @@ declare interface RenameFileProps {
   path: string;
 }
 declare interface UpdateFileUsersProps {
-  fileId: string;
+  file: Models.Document;
   emails: string[];
   path: string;
 }

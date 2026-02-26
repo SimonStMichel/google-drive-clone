@@ -187,20 +187,20 @@ export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
  * Updates the list of users with whom a file is shared.
  * Replaces the entire users list with the provided email addresses.
  * 
- * @param {string} fileId - The ID of the file to update
+ * @param {Models.Document} file - The ID of the file to update
  * @param {string[]} emails - Array of email addresses to share the file with
  * @param {string} path - The path to revalidate after update
  * @returns {Promise<any>} The updated file document
  * @throws {Error} If update fails
  */
-export const updateFileUsers = async ({ fileId, emails, path }: UpdateFileUsersProps) => {
+export const updateFileUsers = async ({ file, emails, path }: UpdateFileUsersProps) => {
     const { databases } = await createAdminClient();
 
     try {
         const updatedFile = await databases.updateDocument(
             appwriteConfig.databaseId,
             appwriteConfig.filesCollectionId,
-            fileId,
+            file.$id,
             {
                 users: emails,
             },

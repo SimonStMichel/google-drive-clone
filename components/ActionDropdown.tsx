@@ -53,7 +53,7 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
 
         const actions = {
             rename: () => renameFile({ fileId: file.$id, name, path }),
-            share: () => updateFileUsers({ fileId: file.$id, emails, path }),
+            share: () => handleAddUser(),
             delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
         };
 
@@ -66,11 +66,28 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
 
     };
 
+    const handleAddUser = async () => {
+        // If email is already added
+        // If email is owner
+
+        const updatedEmails = emails.filter((e) => e !== "email");
+
+
+        const success = await updateFileUsers({
+            file,
+            emails: updatedEmails,
+            path,
+        });
+
+        if (success) setEmails(updatedEmails);
+        closeAllModals();
+    };
+
     const handleRemoveUser = async (email: string) => {
         const updatedEmails = emails.filter((e) => e !== email);
 
         const success = await updateFileUsers({
-            fileId: file.$id,
+            file,
             emails: updatedEmails,
             path,
         });
