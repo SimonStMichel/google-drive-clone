@@ -28,6 +28,7 @@
     "radix-ui": "^1.4.3",
     "react": "19.0.0-rc-02c0e824-20241028",
     "react-dom": "19.0.0-rc-02c0e824-20241028",
+    "@supabase/supabase-js": "^2.38.0",
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.68.0",
     "recharts": "^2.15.4",

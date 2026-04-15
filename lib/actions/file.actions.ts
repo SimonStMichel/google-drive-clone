@@ -1,300 +1,202 @@
-"use server";
+﻿"use server";
 
-import { createAdminClient, createSessionClient } from "../appwrite";
-import { appwriteConfig } from "../appwrite/config";
-
-import { InputFile } from "node-appwrite/file";
-import { ID, Query, Models, Permission, Role } from "node-appwrite";
+import { createAdminClient } from "../supabase";
+import { supabaseConfig } from "../supabase/config";
 import { constructFileUrl, getFileType, parseStringify } from "../utils";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./user.actions";
 
-interface UploadFileProps {
-    file: File;
-    ownerId: string;
-    accountId: string;
-    path: string;
-}
-
-/**
- * Handles errors by logging them to the console and throwing them.
- * 
- * @param {unknown} error - The error object to handle
- * @param {string} message - A descriptive message about the error context
- * @throws {unknown} Re-throws the original error
- */
 const handleError = (error: unknown, message: string) => {
-    console.log(error, message);
-    throw error;
+  console.error(message, error);
+  throw error;
 };
 
-/**
- * Uploads a file to Appwrite storage and creates a corresponding database document.
- * Automatically handles file type detection and URL construction.
- * Cleans up storage if database document creation fails.
- * 
- * @param {File} file - The file object to upload
- * @param {string} ownerId - The ID of the file owner
- * @param {string} accountId - The account ID associated with the file
- * @param {string} path - The path to revalidate after upload
- * @returns {Promise<any>} The created file document with metadata
- * @throws {Error} If upload or document creation fails
- */
 export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileProps) => {
-    const { storage, databases } = await createAdminClient();
+  const supabase = createAdminClient();
 
-    try {
-        const inputFile = InputFile.fromBuffer(file, file.name);
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = Buffer.from(arrayBuffer);
 
-        const bucketFile = await storage.createFile(
-            appwriteConfig.bucketId,
-            ID.unique(),
-            inputFile,
-            [
-                Permission.read(Role.user(accountId)),
-                Permission.update(Role.user(accountId)),
-                Permission.delete(Role.user(accountId))
-            ]);
+    const { name, extension, type } = getFileType(file.name);
+    const bucketFileId = `${accountId}-${crypto.randomUUID()}-${name}.${extension}`;
 
-        const { name, extension, type } = getFileType(bucketFile.name);
+    const { error: uploadError } = await supabase.storage.from(supabaseConfig.bucket).upload(
+      bucketFileId,
+      fileBuffer,
+      {
+        contentType: file.type,
+      }
+    );
 
-        const fileDocument = {
-            type,
-            name,
-            url: constructFileUrl(bucketFile.$id),
-            extension,
-            size: bucketFile.sizeOriginal,
-            owner: ownerId,
-            accountId,
-            users: [],
-            bucketFileId: bucketFile.$id
-        };
-
-        const newFile = await databases.createDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.filesCollectionId,
-            ID.unique(),
-            fileDocument,
-        ).catch(async (error: unknown) => {
-            await storage.deleteFile(appwriteConfig.bucketId, bucketFile.$id);
-
-            handleError(error, "Failed to create file document");
-        });
-
-        revalidatePath(path);
-
-        return parseStringify(newFile);
-    } catch (error) {
-        handleError(error, "Failed to upload file");
+    if (uploadError) {
+      throw uploadError;
     }
+
+    const fileDocument = {
+      type,
+      name,
+      url: constructFileUrl(bucketFileId),
+      extension,
+      size: fileBuffer.byteLength,
+      owner: ownerId,
+      accountId,
+      users: [],
+      bucketFileId,
+      createdAt: new Date().toISOString(),
+    };
+
+    const { data: newFile, error: insertError } = await supabase
+      .from("files")
+      .insert([fileDocument])
+      .select("*")
+      .single();
+
+    if (insertError) {
+      await supabase.storage.from(supabaseConfig.bucket).remove([bucketFileId]);
+      handleError(insertError, "Failed to create file document");
+    }
+
+    revalidatePath(path);
+
+    return parseStringify({ ...newFile, $id: newFile.id });
+  } catch (error) {
+    handleError(error, "Failed to upload file");
+  }
 };
 
-/**
- * Creates Appwrite queries for filtering and sorting files.
- * Builds queries for file ownership and shared access, with optional filtering by type, name, and sort order.
- * 
- * @param {Models.Document} currentUser - The current user document
- * @param {string[]} types - Array of file types to filter by
- * @param {string} searchText - Text to search in file names
- * @param {string} sort - Sort key and order in format "key-order" (e.g., "$createdAt-desc")
- * @param {number} [limit] - Optional maximum number of results
- * @returns {Query[]} Array of Appwrite Query objects
- */
-const createQueries = (currentUser: Models.Document, types: string[], searchText: string, sort: string, limit?: number) => {
-    const queries = [
-        Query.or([
-            Query.equal("owner", [currentUser.$id]),
-            Query.contains("users", [currentUser.email])
-        ])
-    ];
+const createQueries = (
+  currentUser: any,
+  types: string[],
+  searchText: string,
+  sort: string,
+  limit?: number
+) => {
+  const sortPair = sort.split("-");
+  const sortBy = sortPair[0] === "$createdAt" ? "createdAt" : sortPair[0];
+  const orderBy = sortPair[1] === "asc";
 
-    if (types.length > 0) queries.push(Query.equal("type", types));
-    if (searchText) queries.push(Query.contains("name", searchText));
-    if (limit) queries.push(Query.limit(limit));
+  let query = createAdminClient()
+    .from("files")
+    .select("*")
+    .or(`owner.eq.${currentUser.$id},users.cs.{${currentUser.email}}`);
 
-    const [sortBy, orderBy] = sort.split("-");
-    queries.push(orderBy === "asc" ? Query.orderAsc(sortBy) : Query.orderDesc(sortBy));
+  if (types.length > 0) query = query.in("type", types);
+  if (searchText) query = query.ilike("name", `%${searchText}%`);
+  if (limit) query = query.limit(limit);
 
-    return queries;
+  query = query.order(sortBy, { ascending: orderBy });
+
+  return query;
 };
 
-/**
- * Retrieves files for the current user based on filter criteria.
- * Returns files owned by the user or shared with them.
- * 
- * @param {FileType[]} types - Array of file types to filter by (document, image, video, audio, other)
- * @param {string} [searchText] - Optional text to search in file names
- * @param {string} [sort] - Optional sort key and order (default: "$createdAt-desc")
- * @param {number} [limit] - Optional maximum number of files to retrieve
- * @returns {Promise<any>} Object containing array of file documents and metadata
- * @throws {Error} If user not found or database query fails
- */
 export const getFiles = async ({ types = [], searchText = "", sort = "$createdAt-desc", limit }: GetFilesProps) => {
-    const { databases } = await createAdminClient();
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
 
-    try {
-        const currentUser = await getCurrentUser();
+    const query = createQueries(currentUser, types, searchText, sort, limit);
+    const { data, error } = await query;
 
-        if (!currentUser) throw new Error("User not found");
+    if (error) throw error;
 
-        const queries = createQueries(currentUser, types, searchText, sort, limit);
-
-        const files = await databases.listDocuments(
-            appwriteConfig.databaseId,
-            appwriteConfig.filesCollectionId,
-            queries
-        );
-
-        return parseStringify(files);
-
-    } catch (error) {
-        handleError(error, "Failed to get files");
-    }
+    return parseStringify({ documents: data?.map((item: any) => ({ ...item, $id: item.id })) ?? [], total: data?.length ?? 0 });
+  } catch (error) {
+    handleError(error, "Failed to get files");
+  }
 };
 
-/**
- * Renames an existing file in the database.
- * Updates the file document and revalidates the specified path.
- * 
- * @param {string} fileId - The ID of the file to rename
- * @param {string} name - The new name for the file
- * @param {string} path - The path to revalidate after rename
- * @returns {Promise<any>} The updated file document
- * @throws {Error} If update fails
- */
 export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
-    const { databases } = await createAdminClient();
+  try {
+    const { data: updatedFile, error } = await createAdminClient()
+      .from("files")
+      .update({ name })
+      .eq("id", fileId)
+      .select("*")
+      .single();
 
-    try {
-        const newName = `${name}`;
-        const updatedFile = await databases.updateDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.filesCollectionId,
-            fileId,
-            {
-                name: newName,
-            },
-        );
+    if (error) throw error;
 
-        revalidatePath(path);
-        return parseStringify(updatedFile);
-    } catch (error) {
-        handleError(error, "Failed to rename file");
-    }
+    revalidatePath(path);
+    return parseStringify({ ...updatedFile, $id: updatedFile.id });
+  } catch (error) {
+    handleError(error, "Failed to rename file");
+  }
 };
 
-/**
- * Updates the list of users with whom a file is shared.
- * Replaces the entire users list with the provided email addresses.
- * 
- * @param {Models.Document} file - The ID of the file to update
- * @param {string[]} emails - Array of email addresses to share the file with
- * @param {string} path - The path to revalidate after update
- * @returns {Promise<any>} The updated file document
- * @throws {Error} If update fails
- */
 export const updateFileUsers = async ({ file, emails, path }: UpdateFileUsersProps) => {
-    const { databases } = await createAdminClient();
+  try {
+    const { data: updatedFile, error } = await createAdminClient()
+      .from("files")
+      .update({ users: emails })
+      .eq("id", file.$id)
+      .select("*")
+      .single();
 
-    try {
-        const updatedFile = await databases.updateDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.filesCollectionId,
-            file.$id,
-            {
-                users: emails,
-            },
-        );
+    if (error) throw error;
 
-        revalidatePath(path);
-        return parseStringify(updatedFile);
-    } catch (error) {
-        handleError(error, "Failed to update users list");
-    }
+    revalidatePath(path);
+    return parseStringify({ ...updatedFile, $id: updatedFile.id });
+  } catch (error) {
+    handleError(error, "Failed to update users list");
+  }
 };
 
-/**
- * Deletes a file from both the database and storage.
- * Removes the file document from the database and the actual file from storage.
- * 
- * @param {string} fileId - The ID of the file document to delete
- * @param {string} bucketFileId - The ID of the file in storage bucket
- * @param {string} path - The path to revalidate after deletion
- * @returns {Promise<{status: string}>} Object with status indicating success
- * @throws {Error} If deletion fails
- */
 export const deleteFile = async ({ fileId, bucketFileId, path }: DeleteFileProps) => {
-    const { databases, storage } = await createAdminClient();
+  try {
+    const supabase = createAdminClient();
 
-    try {
-        const deletedFile = await databases.deleteDocument(
-            appwriteConfig.databaseId,
-            appwriteConfig.filesCollectionId,
-            fileId,
-        );
+    const { error: deleteError } = await supabase
+      .from("files")
+      .delete()
+      .eq("id", fileId);
 
-        if (deletedFile) {
-            await storage.deleteFile(appwriteConfig.bucketId, bucketFileId);
-        }
+    if (deleteError) throw deleteError;
 
-        revalidatePath(path);
-        return parseStringify({ status: "success" });
-    } catch (error) {
-        handleError(error, "Failed to update users list");
-    }
+    const { error: storageError } = await supabase.storage.from(supabaseConfig.bucket).remove([bucketFileId]);
+    if (storageError) throw storageError;
+
+    revalidatePath(path);
+    return parseStringify({ status: "success" });
+  } catch (error) {
+    handleError(error, "Failed to delete file");
+  }
 };
 
-/**
- * Calculates total storage space used by the current user across all file types.
- * Returns detailed breakdown of space used by document, image, video, audio, and other file types.
- * 
- * @returns {Promise<any>} Object containing:
- *   - image: { size, latestDate }
- *   - document: { size, latestDate }
- *   - video: { size, latestDate }
- *   - audio: { size, latestDate }
- *   - other: { size, latestDate }
- *   - used: Total bytes used
- *   - all: Total available bytes (2GB)
- * @throws {Error} If user not authenticated or database query fails
- */
 export async function getTotalSpaceUsed() {
-    try {
-        const { databases } = await createSessionClient();
-        const currentUser = await getCurrentUser();
-        if (!currentUser) throw new Error("User is not authenticated.");
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User is not authenticated.");
 
-        const files = await databases.listDocuments(
-            appwriteConfig.databaseId,
-            appwriteConfig.filesCollectionId,
-            [Query.equal("owner", [currentUser.$id])],
-        );
+    const { data: files, error } = await createAdminClient()
+      .from("files")
+      .select("*")
+      .eq("owner", currentUser.$id);
 
-        const totalSpace = {
-            image: { size: 0, latestDate: "" },
-            document: { size: 0, latestDate: "" },
-            video: { size: 0, latestDate: "" },
-            audio: { size: 0, latestDate: "" },
-            other: { size: 0, latestDate: "" },
-            used: 0,
-            all: 2 * 1024 * 1024 * 1024 /* 2GB available bucket storage */,
-        };
+    if (error) throw error;
 
-        files.documents.forEach((file) => {
-            const fileType = file.type as FileType;
-            totalSpace[fileType].size += file.size;
-            totalSpace.used += file.size;
+    const totalSpace = {
+      image: { size: 0, latestDate: "" },
+      document: { size: 0, latestDate: "" },
+      video: { size: 0, latestDate: "" },
+      audio: { size: 0, latestDate: "" },
+      other: { size: 0, latestDate: "" },
+      used: 0,
+      all: 2 * 1024 * 1024 * 1024,
+    };
 
-            if (
-                !totalSpace[fileType].latestDate ||
-                new Date(file.$updatedAt) > new Date(totalSpace[fileType].latestDate)
-            ) {
-                totalSpace[fileType].latestDate = file.$updatedAt;
-            }
-        });
+    (files ?? []).forEach((file: any) => {
+      const fileType = file.type as FileType;
+      totalSpace[fileType].size += file.size;
+      totalSpace.used += file.size;
 
-        return parseStringify(totalSpace);
-    } catch (error) {
-        handleError(error, "Error calculating total space used:, ");
-    }
+      if (!totalSpace[fileType].latestDate || new Date(file.updated_at) > new Date(totalSpace[fileType].latestDate)) {
+        totalSpace[fileType].latestDate = file.updated_at;
+      }
+    });
+
+    return parseStringify(totalSpace);
+  } catch (error) {
+    handleError(error, "Error calculating total space used:, ");
+  }
 }
