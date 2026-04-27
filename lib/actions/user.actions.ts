@@ -1,134 +1,60 @@
 "use server";
 
-import { createAdminClient } from "../supabase";
-import { parseStringify } from "../utils";
+import supabase from "../supabase/server";
+// import { parseStringify } from "../utils";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { avatarPlaceholderUrl } from "@/constants";
+// import { avatarPlaceholderUrl } from "@/constants";
 
-const getUserByEmail = async (email: string) => {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-        .from("users")
+export const createAccountEmailPassword = async ({ fullName, email, password }: { fullName: string; email: string, password: string }) => {
+    const { data, error: supabaseError } = await supabase
+        .auth()
+        .register({ email, password });
+
+    if (supabaseError) {
+        handleError(supabaseError, supabaseError.message);
+    }
+
+    const { userId } = data;
+
+    console.log("User ID : " + userId);
+
+    // Check if user already has a document
+    const { data: userDoc, error: dbError } = await supabase
+        .from("userDocuments")
         .select("*")
-        .eq("email", email)
-        .limit(1)
-        .single();
+        .eq("userId", userId);
 
-    if (error) throw error;
-
-    return data;
-};
-
-const getUserByAccountId = async (accountId: string) => {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("accountId", accountId)
-        .limit(1)
-        .single();
-
-    if (error) throw error;
-
-    return data;
-};
-
-const handleError = (error: unknown, message: string) => {
-    console.error(message, error);
-    throw error;
-};
-
-export const sendEmailOTP = async ({ email }: { email: string }) => {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase.auth.signInWithOtp({
-        email,
-        type: "email",
-    });
-
-    if (error) {
-        handleError(error, "Failed to send email OTP");
+    if (dbError) {
+        handleError(dbError, "Error checking user document");
+        return;
     }
 
-    return data.user?.id ?? email;
-};
-
-export const createAccount = async ({ fullName, email }: { fullName: string; email: string }) => {
-    const existingUser = await getUserByEmail(email);
-
-    const accountId = existingUser?.accountId ?? (await sendEmailOTP({ email }));
-    if (!existingUser) {
-        const supabase = createAdminClient();
-        const { error } = await supabase.from("users").insert([
-            {
-                accountId,
-                fullName,
-                email,
-                avatar: avatarPlaceholderUrl,
-                createdAt: new Date().toISOString(),
-            },
-        ]);
-
-        if (error) handleError(error, "Failed to create user document");
+    if (userDoc) {
+        handleError(userDoc, "User already has a document");
+        return;
     }
 
-    return parseStringify({ accountId });
-};
-
-export const verifySecret = async ({ accountId, password }: { accountId: string; password: string }) => {
-    try {
-        const user = await getUserByAccountId(accountId);
-        if (!user) throw new Error("User not found");
-
-        const supabase = createAdminClient();
-        const { data, error } = await supabase.auth.verifyOtp({
-            email: user.email,
-            token: password,
-            type: "email",
+    // If no document exists, proceed to create one
+    const { user } = await supabase
+        .from("userDocuments")
+        .insert({
+            userId,
+            fullName
         });
-
-        if (error || !data.session) {
-            throw error ?? new Error("OTP verification failed");
-        }
-
-        (await cookies()).set("appwrite-session", data.session.access_token, {
-            path: "/",
-            httpOnly: true,
-            sameSite: "strict",
-            secure: true,
-        });
-
-        return parseStringify({ sessionId: data.session.access_token });
-    } catch (error) {
-        handleError(error, "Failed to verify OTP");
-    }
+    // 1. Verify if user exists
+    // 2. If he does, sign him in
+    // 3. If he doesn't, create account
+    return userId;
 };
 
-export const getCurrentUser = async () => {
-    try {
-        const session = (await cookies()).get("appwrite-session");
-        if (!session?.value) return null;
-
-        const supabase = createAdminClient();
-        supabase.auth.setAuth(session.value);
-
-        const { data, error } = await supabase.auth.getUser();
-        if (error || !data.user) return null;
-
-        const { data: user, error: userError } = await createAdminClient()
-            .from("users")
-            .select("*")
-            .eq("accountId", data.user.id)
-            .limit(1)
-            .single();
-
-        if (userError || !user) return null;
-
-        return parseStringify({ ...user, $id: user.id });
-    } catch (error) {
-        console.error(error);
-        return null;
-    }
+export const signInUserEmailPassword = async ({ email, password }: { email: string, password: string }) => {
+    console.log(email);
+    console.log(password);
+    // 1. Verify if user exists
+    // 2. If he does, sign him in
+    // 3. If password is wrong, indicate so.
+    // 4. If he doesn't, create account
 };
 
 export const signOutUser = async () => {
@@ -148,17 +74,53 @@ export const signOutUser = async () => {
     }
 };
 
-export const signInUser = async ({ email }: { email: string }) => {
-    try {
-        const existingUser = await getUserByEmail(email);
+const existingUser = (email: string) => {
 
-        if (!existingUser) throw new Error("user not found.");
-
-        await sendEmailOTP({ email });
-
-        return { accountId: existingUser.accountId };
-    } catch (error) {
-        handleError(error, "Failed to sign in user");
-        throw error;
-    }
 };
+
+const handleError = (error: unknown, message: string) => {
+    console.error(message, error);
+    throw error;
+};
+
+// export const sendEmailOTP = async ({ email }: { email: string }) => {
+//     const supabase = createAdminClient();
+//     const { data, error } = await supabase.auth.signInWithOtp({
+//         email,
+//         type: "email",
+//     });
+
+//     if (error) {
+//         handleError(error, "Failed to send email OTP");
+//     }
+
+//     return data.user?.id ?? email;
+
+// export const verifySecret = async ({ accountId, password }: { accountId: string; password: string }) => {
+//     try {
+//         const user = await getUserByAccountId(accountId);
+//         if (!user) throw new Error("User not found");
+
+//         const supabase = createAdminClient();
+//         const { data, error } = await supabase.auth.verifyOtp({
+//             email: user.email,
+//             token: password,
+//             type: "email",
+//         });
+
+//         if (error || !data.session) {
+//             throw error ?? new Error("OTP verification failed");
+//         }
+
+//         (await cookies()).set("appwrite-session", data.session.access_token, {
+//             path: "/",
+//             httpOnly: true,
+//             sameSite: "strict",
+//             secure: true,
+//         });
+
+//         return parseStringify({ sessionId: data.session.access_token });
+//     } catch (error) {
+//         handleError(error, "Failed to verify OTP");
+//     }
+// };

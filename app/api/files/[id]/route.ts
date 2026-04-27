@@ -1,7 +1,7 @@
 "use server";
 
 import { NextRequest } from "next/server";
-import { createAdminClient, createSessionClient } from "@/lib/supabase";
+import { createAdminClient, createSessionClient } from "@/lib/supabase/server";
 import { supabaseConfig } from "@/lib/supabase/config";
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {

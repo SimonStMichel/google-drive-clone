@@ -1,10 +1,9 @@
 ﻿"use server";
 
-import { createAdminClient } from "../supabase";
-import { supabaseConfig } from "../supabase/config";
+// import { createAdminClient } from "../supabase/supabase";
 import { constructFileUrl, getFileType, parseStringify } from "../utils";
 import { revalidatePath } from "next/cache";
-import { getCurrentUser } from "./user.actions";
+// import { getCurrentUser } from "./user.actions";
 
 const handleError = (error: unknown, message: string) => {
   console.error(message, error);

@@ -1,7 +1,7 @@
 "use server";
 
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase";
+import { createAdminClient } from "@/lib/supabase/server";
 import { supabaseConfig } from "@/lib/supabase/config";
 
 export async function GET(
