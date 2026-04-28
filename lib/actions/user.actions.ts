@@ -1,6 +1,6 @@
 "use server";
 
-import supabase from "../supabase/server";
+import { createClient } from "../supabase/server-client";
 // import { parseStringify } from "../utils";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";

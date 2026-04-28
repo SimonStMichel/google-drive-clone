@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+// import { Poppins } from "next/font/google";
 import "./globals.css";
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-poppins"
-});
+// const poppins = Poppins({
+//   subsets: ["latin"],
+//   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+//   variable: "--font-poppins"
+// });
 
 export const metadata: Metadata = {
   title: "Google drive clone",
@@ -21,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${poppins.variable} font-poppins antialiased`}
+        className={" font-poppins antialiased"}
       >
         {children}
       </body>
