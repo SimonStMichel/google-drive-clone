@@ -2,7 +2,6 @@
 
 import React from "react";
 
-import { Models } from "node-appwrite";
 import { convertFileSize, formatDateTime } from "@/lib/utils";
 
 import Image from "next/image";

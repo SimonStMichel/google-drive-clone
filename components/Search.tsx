@@ -2,8 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 
-import { Models } from "node-appwrite";
-
 import { useDebounce } from "use-debounce";
 
 import Image from "next/image";

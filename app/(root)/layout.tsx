@@ -21,6 +21,9 @@ const Layout = async ({ children }: { children: React.ReactNode }) => {
 
   if (error || !user) return redirect("/sign-in");
 
+  console.log(user);
+
+
   return (
     <main className='flex h-screen'>
       <Sidebar {...user} />

@@ -4,8 +4,6 @@ import React, { useState } from "react";
 
 import { actionsDropdownItems } from "@/constants";
 
-import { Models } from "node-appwrite";
-
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
