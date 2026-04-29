@@ -18,6 +18,9 @@ export async function createSupabaseServerClient() {
     const { supabaseUrl, supabasePublishableKey } = getEnvironnmentVariables();
     const cookieStore = await cookies();
 
+    const allCookies = cookieStore.getAll();
+    console.log("Server cookies:", allCookies.map(c => c.name));
+
     return createServerClient(supabaseUrl, supabasePublishableKey,
         {
             cookies: {

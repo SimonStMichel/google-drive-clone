@@ -1,25 +1,23 @@
-import React from "react";
-
-import { Models } from "node-appwrite";
-import { getFiles } from "@/lib/actions/file.actions";
+// import { getFiles } from "@/lib/actions/file.actions";
 
 import Sort from "@/components/Sort";
 import Card from "@/components/Card";
-import { convertFileSize, getFileTypesParams } from "@/lib/utils";
+// import { convertFileSize, getFileTypesParams } from "@/lib/utils";
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
+
     const type = (await params)?.type as string || "";
     const searchText = ((await searchParams)?.query) as string || "";
     const sort = ((await searchParams)?.sort) as string || "";
 
-    const types = getFileTypesParams(type) as FileType[];
+    // const types = getFileTypesParams(type) as FileType[];
 
-    const files = await getFiles({ types, searchText, sort });
+    // const files = await getFiles({ types, searchText, sort });
 
-    const totalFilesSize = files.documents.reduce(
-        (sum: number, file: Models.Document) => sum + (file.size ?? 0),
-        0
-    );
+    // const totalFilesSize = files.documents.reduce(
+    //     (sum: number, file: Models.Document) => sum + (file.size ?? 0),
+    //     0
+    // );
 
     return (
         <div className="page-container">
@@ -28,7 +26,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
                 <div className="total-size-section">
                     <p className="body-1">
-                        Total: <span className="h5">{convertFileSize(totalFilesSize)}</span>
+                        Total: <span className="h5">{/* convertFileSize(totalFilesSize) */}</span>
                     </p>
 
                     <div className="sort-container">
@@ -38,13 +36,13 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                 </div>
             </section>
 
-            {files.total > 0 ? (
+            {/* {files.total > 0 ? (
                 <section className="file-list">
                     {files.documents.map((file: Models.Document) => (
                         <Card key={file.$id} file={file} />
                     ))}
                 </section>
-            ) : <p className="empty-list">No files uploaded</p>}
+            ) : <p className="empty-list">No files uploaded</p>} */}
 
         </div>
     );

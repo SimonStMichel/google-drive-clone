@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 
 import { actionsDropdownItems } from "@/constants";
-import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
 
 import { Models } from "node-appwrite";
 
@@ -52,9 +51,9 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
         let success = false;
 
         const actions = {
-            rename: () => renameFile({ fileId: file.$id, name, path }),
+            // rename: () => renameFile({ fileId: file.$id, name, path }),
             share: () => handleAddUser(),
-            delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
+            // delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
         };
 
         success = await actions[action.value as keyof typeof actions]();
@@ -70,29 +69,29 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
         // If email is already added
         // If email is owner
 
-        const updatedEmails = emails.filter((e) => e !== "email");
+        // const updatedEmails = emails.filter((e) => e !== "email");
 
 
-        const success = await updateFileUsers({
-            file,
-            emails: updatedEmails,
-            path,
-        });
+        // const success = await updateFileUsers({
+        //     file,
+        //     emails: updatedEmails,
+        //     path,
+        // });
 
-        if (success) setEmails(updatedEmails);
+        // if (success) setEmails(updatedEmails);
         closeAllModals();
     };
 
     const handleRemoveUser = async (email: string) => {
-        const updatedEmails = emails.filter((e) => e !== email);
+        // const updatedEmails = emails.filter((e) => e !== email);
 
-        const success = await updateFileUsers({
-            file,
-            emails: updatedEmails,
-            path,
-        });
+        // const success = await updateFileUsers({
+        //     file,
+        //     emails: updatedEmails,
+        //     path,
+        // });
 
-        if (success) setEmails(updatedEmails);
+        // if (success) setEmails(updatedEmails);
         closeAllModals();
     };
 
