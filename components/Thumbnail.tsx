@@ -1,8 +1,8 @@
-import React from "react";
-
-import { getFileIcon, cn } from "@/lib/utils";
+"use client";
 
 import Image from "next/image";
+
+import { getFileIcon, cn } from "@/lib/utils";
 
 interface Props {
     type: string;

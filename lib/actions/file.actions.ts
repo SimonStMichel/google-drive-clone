@@ -81,7 +81,7 @@ const createQueries = (
   let query = createAdminClient()
     .from("files")
     .select("*")
-    .or(`owner.eq.${currentUser.$id},users.cs.{${currentUser.email}}`);
+    .or(`owner.eq.${currentUser.$id},users.cs.{${currentUser.$id}}`);
 
   if (types.length > 0) query = query.in("type", types);
   if (searchText) query = query.ilike("name", `%${searchText}%`);

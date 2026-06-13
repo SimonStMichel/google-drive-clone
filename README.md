@@ -1,89 +1,135 @@
-# Google drive Clone
+# Google Drive Clone
 
 <div align="center">
   <div>
-     <img src="https://img.shields.io/badge/-Next_JS-black?style=for-the-badge&logoColor=white&logo=nextdotjs&color=000000" alt="nextdotjs" />
+    <img src="https://img.shields.io/badge/-Next_JS-black?style=for-the-badge&logoColor=white&logo=nextdotjs&color=000000" alt="nextdotjs" />
     <img src="https://img.shields.io/badge/-TypeScript-black?style=for-the-badge&logoColor=white&logo=typescript&color=3178C6" alt="typescript" />
     <img src="https://img.shields.io/badge/-Tailwind_CSS-black?style=for-the-badge&logoColor=white&logo=tailwindcss&color=06B6D4" alt="tailwindcss" />
     <img src="https://img.shields.io/badge/-Supabase-black?style=for-the-badge&logoColor=white&logo=supabase&color=3ECF8E" alt="supabase" />
   </div>
 </div>
 
-## 📋 <a name="table">Table of Contents</a>
+A full-stack file storage and sharing app modelled after Google Drive. Originally built following a JavaScript Mastery tutorial using Appwrite; the backend has since been swapped to Supabase (auth, storage, and database).
 
-1. ⚙️ [Tech Stack](#tech-stack)
-2. 🔋 [Features](#features)
-3. 🤸 [Quick Start](#quick-start)
+> **Status:** backend migration in progress — see [TASKS.md](./TASKS.md) for what's left.
+
+## 📋 Table of Contents
+
+1. [Tech Stack](#tech-stack)
+2. [Features](#features)
+3. [Architecture](#architecture)
+4. [Quick Start](#quick-start)
 
 ## <a name="tech-stack">⚙️ Tech Stack</a>
 
-- React 19
-- Next.js 15
-- Supabase
-- TailwindCSS
-- ShadCN
-- TypeScript
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Auth & DB | Supabase (auth + postgres + storage) |
+| Styling | Tailwind CSS + shadcn/ui |
+| Runtime | React 19 |
 
 ## <a name="features">🔋 Features</a>
 
-👉 **User Authentication with Supabase**: Implement signup, login, and logout functionality using Supabase's authentication system.
+- **Authentication** — email/password signup & login, Google OAuth, email OTP confirmation, all via Supabase Auth
+- **File uploads** — documents, images, video, and audio stored in Supabase Storage
+- **File management** — rename, delete, and preview files; open in a new tab
+- **File downloads** — download any file directly from storage
+- **File sharing** — share files with other users by email
+- **Dashboard** — storage usage summary, recent uploads, breakdown by file type
+- **Global search** — find files and shared content across the platform
+- **Sorting** — sort by date, name, or size
+- **Responsive UI** — clean, mobile-friendly design
 
-👉 **FIle Uploads**: Effortlessly upload a variety of file types, including documents, images, videos, and audio, ensuring all your important data.
+## <a name="architecture">🏗️ Architecture</a>
 
-👉 **View and Manage Files**: Users can browse through their uploaded files stored in Supabase storage, view on a new tab, rename file or delete.
+```
+app/
+  (auth)/          # sign-in / sign-up pages
+  (root)/          # main app (dashboard, file type views)
+  api/
+    download/      # file download endpoint
+    files/         # file access & permission checks
+  auth/
+    callback/      # OAuth redirect handler
+    confirm/       # email OTP confirmation
 
-👉 **Download Files**: Users can download their uploaded files giving them instant access to essential documents.
+lib/
+  supabase/
+    browser-client.ts   # singleton browser client (@supabase/ssr)
+    server-client.ts    # server client with cookie handling
+    proxy.ts            # session refresh middleware
+  actions/
+    file.actions.ts     # upload, list, rename, share, delete, storage stats
+    user.actions.ts     # getCurrentUser (in progress)
+  auth/
+    auth-context.tsx    # React context: session state + auth methods
 
-👉 **File Sharing**: Users can easily share their uploaded files with others, enabling collaboration and easy access to important content.
+components/           # shared UI components
+types/                # shared TypeScript types
+```
 
-👉 **Dashboard**: Gain insights at a glance with a dynamic dashboard that showcases total and consumed storage, recent uploads, and a summary of files grouped by type.
+**Database table: `files`**
 
-👉 **Global Search**: Users can quickly find files and shared content across the platform with a robust global search feature.
-
-👉 **Sorting Options**: Organize files efficiently by sorting them by date, name, or size, making file management a breeze.
-
-👉 **Modern Responsive Design**: A fresh and minimalist UI that emphasizes usability, ensuring a clean aesthetic across all devices.
-
-and many more, including the latest **React 19**, **Next.js 15** and **Supabase** features alongside code architecture and
-reusability
+```sql
+CREATE TABLE files (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name           TEXT NOT NULL,
+  type           TEXT NOT NULL,   -- 'document' | 'image' | 'video' | 'audio' | 'other'
+  extension      TEXT,
+  size           BIGINT,
+  url            TEXT,
+  bucket_file_id TEXT UNIQUE NOT NULL,
+  owner          UUID NOT NULL REFERENCES auth.users(id),
+  account_id     TEXT,
+  users          TEXT[] DEFAULT '{}',  -- emails of users the file is shared with
+  created_at     TIMESTAMPTZ DEFAULT now(),
+  updated_at     TIMESTAMPTZ DEFAULT now()
+);
+```
 
 ## <a name="quick-start">🤸 Quick Start</a>
 
-Follow these steps to set up the project locally on your machine.
-
 **Prerequisites**
 
-Make sure you have the following installed on your machine:
-
-- [Git](https://git-scm.com/)
-- [Node.js](https://nodejs.org/en)
+- [Node.js](https://nodejs.org/en) 18+
 - [npm](https://www.npmjs.com/)
+- A [Supabase](https://supabase.com/) project
 
-**Installation**
-
-Install the project dependencies using npm:
+**1. Install dependencies**
 
 ```bash
 npm install
 ```
 
-**Set Up Environment Variables**
+**2. Set up Supabase**
 
-Create a new file named `.env.local` in the root of your project and add the following content:
+In your Supabase project dashboard:
+
+- **Authentication → Providers**: enable Email and Google OAuth
+- **Storage**: create a bucket (e.g. `files`) with authenticated-user RLS policies
+- **SQL Editor**: run the `files` table schema above
+- **Authentication → URL Configuration**: add `http://localhost:3000/auth/callback` to allowed redirect URLs
+
+**3. Configure environment variables**
+
+Create `.env.local` in the project root:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=""
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=""
-NEXT_PUBLIC_SUPABASE_SECRET_KEY=""
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<anon key>
+NEXT_PUBLIC_SUPABASE_SECRET_KEY=<service role key>
 ```
 
-Replace the values with your actual Supabase credentials. You can obtain these credentials by signing up &
-creating a new project on the [Supabase website](https://supabase.com/).
+Find these values in **Supabase → Project Settings → API**.
 
-**Running the Project**
+> The service-role key is used server-side only and never exposed to the browser.
+
+**4. Run the dev server**
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the project.
+Open [http://localhost:3000](http://localhost:3000).

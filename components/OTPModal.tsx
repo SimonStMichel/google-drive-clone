@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 
 import {
     AlertDialog,
@@ -23,9 +23,6 @@ import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-
-import { verifySecret, sendEmailOTP } from "@/lib/actions/user.actions";
-
 
 const OtpModal = ({ accountId, email }: { accountId: string; email: string }) => {
 
