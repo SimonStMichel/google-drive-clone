@@ -1,14 +1,25 @@
-﻿"use server";
+"use server";
 
-// import { createAdminClient } from "../supabase/supabase";
+import { createAdminClient } from "../supabase/server-client";
+import { supabaseConfig } from "../supabase/config";
 import { constructFileUrl, getFileType, parseStringify } from "../utils";
 import { revalidatePath } from "next/cache";
-// import { getCurrentUser } from "./user.actions";
+import { getCurrentUser } from "./user.actions";
 
 const handleError = (error: unknown, message: string) => {
   console.error(message, error);
   throw error;
 };
+
+// Maps a raw DB row (snake_case) to the shape expected across the UI
+const mapFileRecord = (item: Record<string, unknown>) => ({
+  ...item,
+  $id: item.id,
+  bucketFileId: item.bucket_file_id,
+  accountId: item.account_id,
+  $createdAt: item.created_at,
+  $updatedAt: item.updated_at,
+});
 
 export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileProps) => {
   const supabase = createAdminClient();
@@ -20,17 +31,11 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
     const { name, extension, type } = getFileType(file.name);
     const bucketFileId = `${accountId}-${crypto.randomUUID()}-${name}.${extension}`;
 
-    const { error: uploadError } = await supabase.storage.from(supabaseConfig.bucket).upload(
-      bucketFileId,
-      fileBuffer,
-      {
-        contentType: file.type,
-      }
-    );
+    const { error: uploadError } = await supabase.storage
+      .from(supabaseConfig.bucket)
+      .upload(bucketFileId, fileBuffer, { contentType: file.type });
 
-    if (uploadError) {
-      throw uploadError;
-    }
+    if (uploadError) throw uploadError;
 
     const fileDocument = {
       type,
@@ -39,10 +44,9 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
       extension,
       size: fileBuffer.byteLength,
       owner: ownerId,
-      accountId,
+      account_id: accountId,
       users: [],
-      bucketFileId,
-      createdAt: new Date().toISOString(),
+      bucket_file_id: bucketFileId,
     };
 
     const { data: newFile, error: insertError } = await supabase
@@ -57,23 +61,22 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
     }
 
     revalidatePath(path);
-
-    return parseStringify({ ...newFile, $id: newFile.id });
+    return parseStringify(mapFileRecord(newFile));
   } catch (error) {
     handleError(error, "Failed to upload file");
   }
 };
 
 const createQueries = (
-  currentUser: any,
+  currentUser: { $id: string; email: string },
   types: string[],
   searchText: string,
   sort: string,
   limit?: number
 ) => {
-  const sortPair = sort.split("-");
-  const sortBy = sortPair[0] === "$createdAt" ? "createdAt" : sortPair[0];
-  const orderBy = sortPair[1] === "asc";
+  const [sortField, sortDir] = sort.split("-");
+  const sortBy = sortField === "$createdAt" ? "created_at" : sortField;
+  const ascending = sortDir === "asc";
 
   let query = createAdminClient()
     .from("files")
@@ -84,12 +87,15 @@ const createQueries = (
   if (searchText) query = query.ilike("name", `%${searchText}%`);
   if (limit) query = query.limit(limit);
 
-  query = query.order(sortBy, { ascending: orderBy });
-
-  return query;
+  return query.order(sortBy, { ascending });
 };
 
-export const getFiles = async ({ types = [], searchText = "", sort = "$createdAt-desc", limit }: GetFilesProps) => {
+export const getFiles = async ({
+  types = [],
+  searchText = "",
+  sort = "$createdAt-desc",
+  limit,
+}: GetFilesProps) => {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error("User not found");
@@ -99,7 +105,10 @@ export const getFiles = async ({ types = [], searchText = "", sort = "$createdAt
 
     if (error) throw error;
 
-    return parseStringify({ documents: data?.map((item: any) => ({ ...item, $id: item.id })) ?? [], total: data?.length ?? 0 });
+    return parseStringify({
+      documents: (data ?? []).map(mapFileRecord),
+      total: data?.length ?? 0,
+    });
   } catch (error) {
     handleError(error, "Failed to get files");
   }
@@ -117,7 +126,7 @@ export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
     if (error) throw error;
 
     revalidatePath(path);
-    return parseStringify({ ...updatedFile, $id: updatedFile.id });
+    return parseStringify(mapFileRecord(updatedFile));
   } catch (error) {
     handleError(error, "Failed to rename file");
   }
@@ -135,7 +144,7 @@ export const updateFileUsers = async ({ file, emails, path }: UpdateFileUsersPro
     if (error) throw error;
 
     revalidatePath(path);
-    return parseStringify({ ...updatedFile, $id: updatedFile.id });
+    return parseStringify(mapFileRecord(updatedFile));
   } catch (error) {
     handleError(error, "Failed to update users list");
   }
@@ -145,14 +154,12 @@ export const deleteFile = async ({ fileId, bucketFileId, path }: DeleteFileProps
   try {
     const supabase = createAdminClient();
 
-    const { error: deleteError } = await supabase
-      .from("files")
-      .delete()
-      .eq("id", fileId);
-
+    const { error: deleteError } = await supabase.from("files").delete().eq("id", fileId);
     if (deleteError) throw deleteError;
 
-    const { error: storageError } = await supabase.storage.from(supabaseConfig.bucket).remove([bucketFileId]);
+    const { error: storageError } = await supabase.storage
+      .from(supabaseConfig.bucket)
+      .remove([bucketFileId]);
     if (storageError) throw storageError;
 
     revalidatePath(path);
@@ -169,7 +176,7 @@ export async function getTotalSpaceUsed() {
 
     const { data: files, error } = await createAdminClient()
       .from("files")
-      .select("*")
+      .select("type, size, updated_at")
       .eq("owner", currentUser.$id);
 
     if (error) throw error;
@@ -184,18 +191,21 @@ export async function getTotalSpaceUsed() {
       all: 2 * 1024 * 1024 * 1024,
     };
 
-    (files ?? []).forEach((file: any) => {
+    (files ?? []).forEach((file) => {
       const fileType = file.type as FileType;
       totalSpace[fileType].size += file.size;
       totalSpace.used += file.size;
 
-      if (!totalSpace[fileType].latestDate || new Date(file.updated_at) > new Date(totalSpace[fileType].latestDate)) {
+      if (
+        !totalSpace[fileType].latestDate ||
+        new Date(file.updated_at) > new Date(totalSpace[fileType].latestDate)
+      ) {
         totalSpace[fileType].latestDate = file.updated_at;
       }
     });
 
     return parseStringify(totalSpace);
   } catch (error) {
-    handleError(error, "Error calculating total space used:, ");
+    handleError(error, "Error calculating total space used");
   }
 }
