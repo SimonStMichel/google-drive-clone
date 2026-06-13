@@ -1,7 +1,8 @@
+import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-function getEnvironnmentVariables() {
+function getEnvironmentVariables() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -15,28 +16,42 @@ function getEnvironnmentVariables() {
 }
 
 export async function createSupabaseServerClient() {
-    const { supabaseUrl, supabasePublishableKey } = getEnvironnmentVariables();
+    const { supabaseUrl, supabasePublishableKey } = getEnvironmentVariables();
     const cookieStore = await cookies();
 
-    const allCookies = cookieStore.getAll();
-    console.log("Server cookies:", allCookies.map(c => c.name));
-
-    return createServerClient(supabaseUrl, supabasePublishableKey,
-        {
-            cookies: {
-                getAll() {
-                    return cookieStore.getAll();
-                },
-                setAll(cookiesToSet, _headers) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        );
-                    } catch (error) {
-                        console.log(error);
-                    }
-                },
+    return createServerClient(supabaseUrl, supabasePublishableKey, {
+        cookies: {
+            getAll() {
+                return cookieStore.getAll();
             },
-        }
-    );
+            setAll(cookiesToSet) {
+                try {
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        cookieStore.set(name, value, options)
+                    );
+                } catch {
+                    // Called from a Server Component — cookie writes are a no-op
+                }
+            },
+        },
+    });
+}
+
+// Session-scoped server client (cookie-aware, used in API routes)
+export async function createSessionClient() {
+    return createSupabaseServerClient();
+}
+
+// Service-role client for privileged server operations (never sent to browser)
+export function createAdminClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseSecretKey = process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY;
+
+    if (!supabaseUrl || !supabaseSecretKey) {
+        throw new Error(
+            "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_SECRET_KEY"
+        );
+    }
+
+    return createClient(supabaseUrl, supabaseSecretKey);
 }
