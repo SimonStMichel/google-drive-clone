@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-
-import { actionsDropdownItems } from "@/constants";
+import { useState } from "react";
 
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
+import { actionsDropdownItems } from "@/constants";
+
+import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { FileDetails, ShareInput } from "./ActionsModalContent";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     DropdownMenu,
@@ -20,10 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 
-import { Input } from "./ui/input";
-import { FileDetails, ShareInput } from "./ActionsModalContent";
-
-const ActionDropdown = ({ file }: { file: Models.Document }) => {
+const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     const path = usePathname();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
