@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { cn, convertFileToUrl, getFileType } from "@/lib/utils";
+import { uploadFile } from "@/lib/actions/file.actions";
 import { useToast } from "@/hooks/use-toast";
 import { useDropzone } from "react-dropzone";
 
