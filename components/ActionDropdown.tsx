@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 import { actionsDropdownItems } from "@/constants";
+import { renameFile, deleteFile, updateFileUsers } from "@/lib/actions/file.actions";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -45,51 +46,29 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
 
         setIsLoading(true);
 
-        let success = false;
-
-        const actions = {
-            // rename: () => renameFile({ fileId: file.$id, name, path }),
+        const actions: Record<string, () => Promise<unknown>> = {
+            rename: () => renameFile({ fileId: file.$id, name, path }),
             share: () => handleAddUser(),
-            // delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
+            delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
         };
 
-        success = await actions[action.value as keyof typeof actions]();
+        const handler = actions[action.value];
+        const success = handler ? await handler() : false;
 
-        if (success) {
-            closeAllModals();
-            setIsLoading(false);
-        }
-
+        if (success) closeAllModals();
+        setIsLoading(false);
     };
 
     const handleAddUser = async () => {
-        // If email is already added
-        // If email is owner
-
-        // const updatedEmails = emails.filter((e) => e !== "email");
-
-
-        // const success = await updateFileUsers({
-        //     file,
-        //     emails: updatedEmails,
-        //     path,
-        // });
-
-        // if (success) setEmails(updatedEmails);
-        closeAllModals();
+        const success = await updateFileUsers({ file, emails, path });
+        if (success) setEmails(emails);
+        return success;
     };
 
     const handleRemoveUser = async (email: string) => {
-        // const updatedEmails = emails.filter((e) => e !== email);
-
-        // const success = await updateFileUsers({
-        //     file,
-        //     emails: updatedEmails,
-        //     path,
-        // });
-
-        // if (success) setEmails(updatedEmails);
-        closeAllModals();
+        const updatedEmails = file.users.filter((e) => e !== email);
+        const success = await updateFileUsers({ file, emails: updatedEmails, path });
+        if (success) closeAllModals();
     };
 
     const renderDialogContent = () => {
@@ -105,7 +84,7 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
                     {value === "share" && <ShareInput file={file} onInputChange={setEmails} onRemove={handleRemoveUser} />}
                     {value === "details" && <FileDetails file={file} />}
                     {value === "delete" && (
-                        <p className="delete-confirmation">Are you sure you want to delete {" "} <span className="delete-file-name">{file.name}</span>?</p>
+                        <p className="delete-confirmation">Are you sure you want to delete{" "}<span className="delete-file-name">{file.name}</span>?</p>
                     )}
                 </DialogHeader>
                 {["rename", "delete", "share"].includes(value) && (
@@ -141,15 +120,17 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
                                 setIsModalOpen(true);
                             }
                         }}>
-                            {actionItem.value === "download" ?
+                            {actionItem.value === "download" ? (
                                 <Link href={`/api/download/${file.bucketFileId}`} download={`${file.name}.${file.extension}`} className="flex items-center gap-2">
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
                                     {actionItem.label}
-                                </Link> :
+                                </Link>
+                            ) : (
                                 <div className="flex items-center gap-2">
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
                                     {actionItem.label}
-                                </div>}
+                                </div>
+                            )}
                         </DropdownMenuItem>
                     ))}
                 </DropdownMenuContent>
