@@ -16,12 +16,12 @@ const mapFileRecord = (item: Record<string, unknown>) => ({
   ...item,
   $id: item.id,
   bucketFileId: item.bucket_file_id,
-  accountId: item.account_id,
+  accountId: item.owner,
   $createdAt: item.created_at,
   $updatedAt: item.updated_at,
 });
 
-export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileProps) => {
+export const uploadFile = async ({ file, ownerId, path }: UploadFileProps) => {
   const supabase = createAdminClient();
 
   try {
@@ -29,7 +29,7 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
     const fileBuffer = Buffer.from(arrayBuffer);
 
     const { name, extension, type } = getFileType(file.name);
-    const bucketFileId = `${accountId}-${crypto.randomUUID()}-${name}.${extension}`;
+    const bucketFileId = crypto.randomUUID();
 
     const { error: uploadError } = await supabase.storage
       .from(supabaseConfig.bucket)
@@ -44,8 +44,7 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
       extension,
       size: fileBuffer.byteLength,
       owner: ownerId,
-      account_id: accountId,
-      users: [],
+      shared_with: [],
       bucket_file_id: bucketFileId,
     };
 
@@ -81,7 +80,7 @@ const createQueries = (
   let query = createAdminClient()
     .from("files")
     .select("*")
-    .or(`owner.eq.${currentUser.$id},users.cs.{${currentUser.$id}}`);
+    .or(`owner.eq.${currentUser.$id},shared_with.cs.{${currentUser.$id}}`);
 
   if (types.length > 0) query = query.in("type", types);
   if (searchText) query = query.ilike("name", `%${searchText}%`);

@@ -14,7 +14,7 @@ declare interface SupabaseFile {
   bucket_file_id: string;
   account_id: string;
   owner: string;
-  users: string[];
+  shared_with: string[];
   created_at: string;
   updated_at: string;
   // Mapped convenience fields added by mapFileRecord
