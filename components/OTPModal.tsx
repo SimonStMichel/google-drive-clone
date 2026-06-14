@@ -41,7 +41,6 @@ const OtpModal = ({ accountId, email }: { accountId: string; email: string }) =>
             if (sessionId) router.push("/");
         } catch (error) {
             console.log("Failed to verify OTP", error);
-
         }
 
         setIsLoading(false);

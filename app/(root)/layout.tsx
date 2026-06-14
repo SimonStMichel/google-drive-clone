@@ -15,14 +15,7 @@ const Layout = async ({ children }: { children: React.ReactNode }) => {
   const supabase = await createSupabaseServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
-  console.log("User : " + user);
-  console.log("Error : " + error?.message);
-
-
   if (error || !user) return redirect("/sign-in");
-
-  console.log(user);
-
 
   return (
     <main className='flex h-screen'>
