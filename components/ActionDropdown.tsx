@@ -66,7 +66,7 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     };
 
     const handleRemoveUser = async (email: string) => {
-        const updatedEmails = file.users.filter((e) => e !== email);
+        const updatedEmails = file.shared_with.filter((e) => e !== email);
         const success = await updateFileUsers({ file, emails: updatedEmails, path });
         if (success) closeAllModals();
     };

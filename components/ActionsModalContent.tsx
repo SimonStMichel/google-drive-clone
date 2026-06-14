@@ -46,8 +46,8 @@ export const FileDetails = ({ file }: { file: SupabaseFile }) => {
                 <DetailRow label="Format :" value={file.extension} />
                 <DetailRow label="Size :" value={convertFileSize(file.size)} />
                 <DetailRow label="Last edit :" value={formatDateTime(file.$updatedAt)} />
-                {file.users.length > 0 && (
-                    <SharedUsersRow label="Sharing to :" values={file.users} />
+                {file.shared_with.length > 0 && (
+                    <SharedUsersRow label="Sharing to :" values={file.shared_with} />
                 )}
             </div>
         </>

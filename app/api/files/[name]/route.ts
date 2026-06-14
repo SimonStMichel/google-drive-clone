@@ -4,8 +4,8 @@ import { NextRequest } from "next/server";
 import { createAdminClient, createSessionClient } from "@/lib/supabase/server-client";
 import { supabaseConfig } from "@/lib/supabase/config";
 
-export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-    const { id: fileId } = await context.params;
+export async function GET(_req: NextRequest, context: { params: Promise<{ name: string }> }) {
+    const { name: fullName } = await context.params;
 
     let user;
     try {
@@ -17,29 +17,32 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
         return new Response("Unauthorized", { status: 401 });
     }
 
+    const dotIndex = fullName.lastIndexOf(".");
+    const name = dotIndex !== -1 ? fullName.slice(0, dotIndex) : fullName;
+    const extension = dotIndex !== -1 ? fullName.slice(dotIndex + 1) : "";
+
     const supabaseAdmin = createAdminClient();
 
-    const { data: fileDoc, error: fetchError } = await supabaseAdmin
-        .from("files")
-        .select("*")
-        .eq("id", fileId)
-        .single();
+    let query = supabaseAdmin.from("files").select("*").eq("name", name);
+    if (extension) query = query.eq("extension", extension);
 
-    if (fetchError || !fileDoc) {
+    const { data: fileDocs, error: fetchError } = await query;
+
+    if (fetchError || !fileDocs?.length) {
         return new Response("File not found", { status: 404 });
     }
 
-    const isOwner = fileDoc.owner === user.id;
-    const isSharedUser = Array.isArray(fileDoc.users) && fileDoc.users.includes(user.email);
+    const fileDoc = fileDocs.find(
+        (f) => f.owner === user.id || (Array.isArray(f.shared_with) && f.shared_with.includes(user.email))
+    );
 
-    if (!isOwner && !isSharedUser) {
+    if (!fileDoc) {
         return new Response("Forbidden", { status: 403 });
     }
 
-    const { data: metadata } = await supabaseAdmin.storage.from(supabaseConfig.bucket).getMetadata(fileDoc.bucketFileId);
     const { data: fileStream, error: downloadError } = await supabaseAdmin.storage
         .from(supabaseConfig.bucket)
-        .download(fileDoc.bucketFileId);
+        .download(fileDoc.bucket_file_id);
 
     if (downloadError || !fileStream) {
         return new Response("File not found", { status: 404 });
@@ -47,11 +50,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     return new Response(fileStream, {
         headers: {
-            "Content-Type": metadata?.data?.contentType || "application/octet-stream",
-            "Content-Disposition": `inline; filename="${fileDoc.name}.${fileDoc.extension}"`,
+            "Content-Type": fileStream.type || "application/octet-stream",
+            "Content-Disposition": `inline; filename="${fullName}"`,
             "Accept-Ranges": "bytes",
             "Cache-Control": "private, max-age=0",
         },
     });
 }
-

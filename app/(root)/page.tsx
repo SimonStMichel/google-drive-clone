@@ -61,7 +61,7 @@ const Dashboard = async () => {
           <ul className="mt-5 flex flex-col gap-5">
             {files.documents.map((file: SupabaseFile) => (
               <Link
-                href={`/api/files/${file.$id}`}
+                href={`/api/files/${file.name}.${file.extension}`}
                 target="_blank"
                 className="flex items-center gap-3"
                 key={file.$id}
