@@ -11,7 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useAuth } from "@/lib/auth/auth-context";
 
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -44,6 +44,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<StatusMessage>({ type: "idle", text: "" });
 
+  const router = useRouter();
   const { signInEmailPassword, signUpEmailPassword, signInWithGoogle } = useAuth();
 
   const formSchema = authFormSchema(type);
@@ -85,8 +86,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
         setStatus({ type: "error", text: error.message });
       } else {
         setStatus({ type: "success", text: "Signed in successfully!" });
-        await new Promise(resolve => setTimeout(resolve, 100));
-        redirect("/");
+        router.push("/");
+        router.refresh();
       }
     }
     setIsLoading(false);
@@ -226,8 +227,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
           </div>
         </form>
       </Form>
-
-      {/* {accountId && <OtpModal email={form.getValues("email")} accountId={accountId} />} */}
     </>
   );
 };

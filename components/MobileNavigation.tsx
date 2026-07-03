@@ -33,6 +33,7 @@ const MobileNavigation = ({ $id: ownerId, accountId, fullName, avatar, email }: 
 
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const { signOut } = useAuth();
 
@@ -75,7 +76,7 @@ const MobileNavigation = ({ $id: ownerId, accountId, fullName, avatar, email }: 
           <Separator className="my-5 bg-light-200/20" />
           <div className="flex flex-col justify-between gap-5 pb-5">
             <FileUploader ownerId={ownerId} accountId={accountId} />
-            <Button type="button" className="mobile-sign-out-button" onClick={async () => await signOutUser()}>
+            <Button type="button" className="mobile-sign-out-button" onClick={handleSignOut}>
               <Image src="/assets/icons/logout.svg" alt="logout" width={24} height={24} />
               <p>Logout</p>
             </Button>

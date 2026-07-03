@@ -10,7 +10,7 @@ import FormattedDateTime from "./FormattedDateTime";
 
 const Card = ({ file }: { file: SupabaseFile }) => {
   return (
-    <Link href={`/api/files/${file.name}.${file.extension}`} target="_blank" className="file-card">
+    <Link href={file.url || `/api/download/${file.$id}`} target="_blank" rel="noopener noreferrer" className="file-card">
       <div className="flex justify-between">
         <Thumbnail type={file.type} extension={file.extension} url={file.url} className="!size-20" imageClassName="!size-11" />
         <div className="flex flex-col items-end justify-between">

@@ -1,26 +1,58 @@
-"use server";
-
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server-client";
+import { createAdminClient, createSessionClient } from "@/lib/supabase/server-client";
 import { supabaseConfig } from "@/lib/supabase/config";
 
+const DOWNLOAD_URL_TTL = 60; // seconds
+
+// Authorized download: `fileId` is the file row id. We verify the session,
+// check the caller owns or is shared on the file, then redirect to a
+// short-lived signed URL that forces an attachment download.
 export async function GET(
     _req: Request,
     { params }: { params: Promise<{ fileId: string }> }
 ) {
     const { fileId } = await params;
-    const supabase = createAdminClient();
 
-    const { data, error } = await supabase.storage.from(supabaseConfig.bucket).download(fileId);
+    let user;
+    try {
+        const supabase = await createSessionClient();
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data.user) throw error;
+        user = data.user;
+    } catch {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
 
-    if (error || !data) {
+    const admin = createAdminClient();
+
+    const { data: file, error } = await admin
+        .from("files")
+        .select("*")
+        .eq("id", fileId)
+        .single();
+
+    if (error || !file) {
         return new NextResponse("File not found", { status: 404 });
     }
 
-    return new NextResponse(data, {
-        headers: {
-            "Content-Disposition": "attachment",
-            "Content-Type": data.type || "application/octet-stream",
-        },
-    });
+    const isOwner = file.owner === user.id;
+    // shared_with is stored lowercased on write, so match on the lowercased email.
+    const email = user.email?.toLowerCase();
+    const isShared =
+        Array.isArray(file.shared_with) && !!email && file.shared_with.includes(email);
+    if (!isOwner && !isShared) {
+        return new NextResponse("Forbidden", { status: 403 });
+    }
+
+    const filename = file.extension ? `${file.name}.${file.extension}` : file.name;
+
+    const { data: signed, error: signError } = await admin.storage
+        .from(supabaseConfig.bucket)
+        .createSignedUrl(file.bucket_file_id, DOWNLOAD_URL_TTL, { download: filename });
+
+    if (signError || !signed?.signedUrl) {
+        return new NextResponse("File not found", { status: 404 });
+    }
+
+    return NextResponse.redirect(signed.signedUrl);
 }

@@ -15,16 +15,14 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Supabase Storage signed URLs (image thumbnails)
         protocol: "https",
-        hostname: "cdn.pixabay.com",
+        hostname: "*.supabase.co",
       },
       {
+        // Google OAuth avatars (user_metadata.avatar_url)
         protocol: "https",
-        hostname: "icon-library.com",
-      },
-      {
-        protocol: "https",
-        hostname: "img.freepik.com",
+        hostname: "*.googleusercontent.com",
       },
     ],
   },

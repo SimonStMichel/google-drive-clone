@@ -60,8 +60,11 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     };
 
     const handleAddUser = async () => {
-        const success = await updateFileUsers({ file, emails, path });
-        if (success) setEmails(emails);
+        // Merge newly typed emails into the existing share list (dedupe, drop blanks)
+        const newEmails = emails.map((e) => e.trim().toLowerCase()).filter(Boolean);
+        const merged = Array.from(new Set([...(file.shared_with ?? []), ...newEmails]));
+
+        const success = await updateFileUsers({ file, emails: merged, path });
         return success;
     };
 
@@ -121,7 +124,7 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
                             }
                         }}>
                             {actionItem.value === "download" ? (
-                                <Link href={`/api/download/${file.bucketFileId}`} download={`${file.name}.${file.extension}`} className="flex items-center gap-2">
+                                <Link href={`/api/download/${file.$id}`} download={`${file.name}.${file.extension}`} className="flex items-center gap-2">
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
                                     {actionItem.label}
                                 </Link>

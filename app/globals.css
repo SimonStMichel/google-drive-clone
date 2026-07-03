@@ -3,20 +3,61 @@
 @tailwind utilities;
 
 @layer base {
+  /* shadcn/ui design tokens (space-separated HSL, consumed via hsl(var(--x))).
+     Primary / ring are anchored on the brand blue (#45a3df ≈ 203 71% 57%). */
   :root {
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
+    --background: 0 0% 100%;
+    --foreground: 231 30% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 231 30% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 231 30% 11%;
+    --primary: 203 71% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 231 30% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 203 71% 94%;
+    --accent-foreground: 203 60% 25%;
+    --destructive: 0 100% 36%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 203 71% 57%;
+    --radius: 0.5rem;
+    --chart-1: 203 71% 57%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 
   .dark {
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
+    --background: 231 30% 8%;
+    --foreground: 210 40% 98%;
+    --card: 231 30% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 231 30% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 203 71% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 231 20% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 231 20% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 231 20% 18%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 231 20% 18%;
+    --input: 231 20% 18%;
+    --ring: 203 71% 57%;
+    --chart-1: 203 71% 57%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 40%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 
   * {

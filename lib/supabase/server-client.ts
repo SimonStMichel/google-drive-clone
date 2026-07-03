@@ -42,16 +42,20 @@ export async function createSessionClient() {
     return createSupabaseServerClient();
 }
 
-// Service-role client for privileged server operations (never sent to browser)
+// Service-role client for privileged server operations (never sent to browser).
+// NOTE: the secret key MUST NOT be prefixed with NEXT_PUBLIC_ — that would inline
+// it into the client bundle and let anyone bypass RLS.
 export function createAdminClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseSecretKey = process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY;
+    const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
     if (!supabaseUrl || !supabaseSecretKey) {
         throw new Error(
-            "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_SECRET_KEY"
+            "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY"
         );
     }
 
-    return createClient(supabaseUrl, supabaseSecretKey);
+    return createClient(supabaseUrl, supabaseSecretKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+    });
 }

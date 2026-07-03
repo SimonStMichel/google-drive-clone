@@ -160,16 +160,6 @@ export const getFileIcon = (
   }
 };
 
-// STORAGE URL HELPERS
-// Construct file URL via the backend download proxy.
-export const constructFileUrl = (fileId: string) => {
-  return `/api/download/${encodeURIComponent(fileId)}`;
-};
-
-export const constructDownloadUrl = (bucketFileId: string) => {
-  return `/api/download/${encodeURIComponent(bucketFileId)}`;
-};
-
 // DASHBOARD UTILS
 export const getUsageSummary = (totalSpace: any) => {
   return [
