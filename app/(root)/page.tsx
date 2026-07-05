@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Models } from "node-appwrite";
 
 import ActionDropdown from "@/components/ActionDropdown";
 import { Chart } from "@/components/Chart";
@@ -11,7 +10,6 @@ import { getFiles, getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { convertFileSize, getUsageSummary } from "@/lib/utils";
 
 const Dashboard = async () => {
-  // Parallel requests
   const [files, totalSpace] = await Promise.all([
     getFiles({ types: [], limit: 10 }),
     getTotalSpaceUsed(),
@@ -22,7 +20,7 @@ const Dashboard = async () => {
   return (
     <div className="dashboard-container">
       <section>
-        <Chart used={totalSpace.used} />
+        <Chart used={totalSpace?.used ?? 0} />
 
         <ul className="dashboard-summary-list">
           {usageSummary.map((summary) => (
@@ -59,12 +57,13 @@ const Dashboard = async () => {
 
       <section className="dashboard-recent-files">
         <h2 className="h3 xl:h2 text-light-100">Recent files uploaded</h2>
-        {files.documents.length > 0 ? (
+        {files?.documents && files.documents.length > 0 ? (
           <ul className="mt-5 flex flex-col gap-5">
-            {files.documents.map((file: Models.Document) => (
+            {files.documents.map((file: SupabaseFile) => (
               <Link
-                href={`/api/files/${file.$id}`}
+                href={file.url || `/api/download/${file.$id}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-3"
                 key={file.$id}
               >
@@ -77,6 +76,7 @@ const Dashboard = async () => {
                 <div className="recent-file-details">
                   <div className="flex flex-col gap-1">
                     <p className="recent-file-name">{file.name}</p>
+                    {file.isSharedWithMe && <span className="shared-badge">Shared with you</span>}
                     <FormattedDateTime
                       date={file.$createdAt}
                       className="caption"

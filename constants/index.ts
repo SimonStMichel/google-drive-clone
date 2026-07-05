@@ -26,11 +26,12 @@ export const navItems = [
     },
 ];
 
-export const actionsDropdownItems = [
+export const actionsDropdownItems: ActionType[] = [
     {
         label: "Rename",
         icon: "/assets/icons/edit.svg",
-        value: "rename"
+        value: "rename",
+        visibility: "owner"
     },
     {
         label: "Details",
@@ -40,7 +41,8 @@ export const actionsDropdownItems = [
     {
         label: "Share",
         icon: "/assets/icons/share.svg",
-        value: "share"
+        value: "share",
+        visibility: "owner"
     },
     {
         label: "Download",
@@ -48,19 +50,32 @@ export const actionsDropdownItems = [
         value: "download"
     },
     {
+        label: "Save a Copy",
+        icon: "/assets/icons/copy.svg",
+        value: "copy",
+        visibility: "shared"
+    },
+    {
+        label: "Remove Access",
+        icon: "/assets/icons/remove.svg",
+        value: "removeAccess",
+        visibility: "shared"
+    },
+    {
         label: "Delete",
         icon: "/assets/icons/delete.svg",
-        value: "delete"
+        value: "delete",
+        visibility: "owner"
     },
 ];
 
 export const sortTypes = [
     {
-        label: "Size (Newest)",
+        label: "Date created (newest)",
         value: "$createdAt-desc",
     },
     {
-        label: "Size (Oldest)",
+        label: "Date created (oldest)",
         value: "$createdAt-asc",
     },
     {
@@ -72,15 +87,15 @@ export const sortTypes = [
         value: "name-desc",
     },
     {
-        label: "Size (Highest)",
-        value: "name-desc",
+        label: "Size (highest)",
+        value: "size-desc",
     },
     {
-        label: "Size (Lowest)",
-        value: "name-asc",
+        label: "Size (lowest)",
+        value: "size-asc",
     },
 ];
 
-export const avatarPlaceholderUrl = "https://icon-library.com/images/default-profile-icon/default-profile-icon-24.jpg";
+export const avatarPlaceholderUrl = "/assets/images/avatar.png";
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB

@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
-
-import { actionsDropdownItems } from "@/constants";
-import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
-
-import { Models } from "node-appwrite";
+import { useState } from "react";
 
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
+import { actionsDropdownItems } from "@/constants";
+import { renameFile, deleteFile, updateFileUsers, copyFile, removeMyAccess } from "@/lib/actions/file.actions";
+import { useToast } from "@/hooks/use-toast";
+
+import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { FileDetails, ShareInput } from "./ActionsModalContent";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
     DropdownMenu,
@@ -23,11 +24,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 
-import { Input } from "./ui/input";
-import { FileDetails, ShareInput } from "./ActionsModalContent";
-
-const ActionDropdown = ({ file }: { file: Models.Document }) => {
+const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     const path = usePathname();
+    const { toast } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -35,6 +34,12 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     const [name, setName] = useState(file.name);
     const [isLoading, setIsLoading] = useState(false);
     const [emails, setEmails] = useState<string[]>([]);
+
+    const visibleItems = actionsDropdownItems.filter((item) => {
+        if (item.visibility === "owner") return !file.isSharedWithMe;
+        if (item.visibility === "shared") return file.isSharedWithMe;
+        return true;
+    });
 
     const closeAllModals = () => {
         setIsModalOpen(false);
@@ -44,56 +49,82 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
         setEmails([]);
     };
 
+    const showErrorToast = (error: unknown, fallback: string) => {
+        toast({
+            description: (
+                <p className="body-2 text-white">{error instanceof Error ? error.message : fallback}</p>
+            ),
+            className: "error-toast",
+        });
+    };
+
     const handleAction = async () => {
         if (!action) return;
 
         setIsLoading(true);
 
-        let success = false;
-
-        const actions = {
+        const actions: Record<string, () => Promise<unknown>> = {
             rename: () => renameFile({ fileId: file.$id, name, path }),
             share: () => handleAddUser(),
-            delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
+            delete: () => deleteFile({ fileId: file.$id, path }),
+            removeAccess: () => removeMyAccess({ fileId: file.$id, path }),
         };
 
-        success = await actions[action.value as keyof typeof actions]();
+        try {
+            const handler = actions[action.value];
+            const success = handler ? await handler() : false;
 
-        if (success) {
-            closeAllModals();
+            if (success) closeAllModals();
+        } catch (error) {
+            showErrorToast(error, "Something went wrong");
+        } finally {
             setIsLoading(false);
         }
-
     };
 
     const handleAddUser = async () => {
-        // If email is already added
-        // If email is owner
+        // Merge newly typed emails into the existing share list (dedupe, drop blanks).
+        // The server strips the owner's own email (sharing with yourself is a no-op)
+        // and reports back whether it did, via `selfShareBlocked` — driving the toast
+        // off that server-authoritative flag instead of a client-side email guess.
+        const newEmails = emails.map((e) => e.trim().toLowerCase()).filter(Boolean);
+        const merged = Array.from(new Set([...(file.shared_with ?? []), ...newEmails]));
 
-        const updatedEmails = emails.filter((e) => e !== "email");
+        const result = await updateFileUsers({ file, emails: merged, path });
 
+        if (result?.selfShareBlocked) {
+            toast({
+                description: (
+                    <p className="body-2 text-white">You already have access — no need to share with yourself</p>
+                ),
+                className: "error-toast",
+            });
+        }
 
-        const success = await updateFileUsers({
-            file,
-            emails: updatedEmails,
-            path,
-        });
+        return result;
+    };
 
-        if (success) setEmails(updatedEmails);
-        closeAllModals();
+    const handleCopy = async () => {
+        setIsLoading(true);
+
+        try {
+            await copyFile({ fileId: file.$id, path });
+            setIsDropdownOpen(false);
+            toast({
+                description: <p className="body-2 text-white">Saved a copy to your files</p>,
+            });
+        } catch (error) {
+            setIsDropdownOpen(false);
+            showErrorToast(error, "Could not save a copy");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleRemoveUser = async (email: string) => {
-        const updatedEmails = emails.filter((e) => e !== email);
-
-        const success = await updateFileUsers({
-            file,
-            emails: updatedEmails,
-            path,
-        });
-
-        if (success) setEmails(updatedEmails);
-        closeAllModals();
+        const updatedEmails = file.shared_with.filter((e) => e !== email);
+        const success = await updateFileUsers({ file, emails: updatedEmails, path });
+        if (success) closeAllModals();
     };
 
     const renderDialogContent = () => {
@@ -109,14 +140,17 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
                     {value === "share" && <ShareInput file={file} onInputChange={setEmails} onRemove={handleRemoveUser} />}
                     {value === "details" && <FileDetails file={file} />}
                     {value === "delete" && (
-                        <p className="delete-confirmation">Are you sure you want to delete {" "} <span className="delete-file-name">{file.name}</span>?</p>
+                        <p className="delete-confirmation">Are you sure you want to delete{" "}<span className="delete-file-name">{file.name}</span>?</p>
+                    )}
+                    {value === "removeAccess" && (
+                        <p className="delete-confirmation">Remove your access to{" "}<span className="delete-file-name">{file.name}</span>? You&apos;ll need to be shared with again to see it.</p>
                     )}
                 </DialogHeader>
-                {["rename", "delete", "share"].includes(value) && (
+                {["rename", "delete", "share", "removeAccess"].includes(value) && (
                     <DialogFooter className="flex flex-col gap-3 md:flex-row">
                         <Button onClick={closeAllModals} className="modal-cancel-button">Cancel</Button>
                         <Button onClick={handleAction} className="modal-submit-button">
-                            <p className="capitalize">{value}</p>
+                            <p>{label}</p>
                             {isLoading && (
                                 <Image src="/assets/icons/loader.svg" alt="loader" width={24} height={24} className="animate-spin" />
                             )}
@@ -138,22 +172,36 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
                         {file.name}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {actionsDropdownItems.map((actionItem) => (
+                    {visibleItems.map((actionItem) => (
                         <DropdownMenuItem key={actionItem.value} className="shad-dropdown-item" onClick={() => {
+                            if (actionItem.value === "copy") {
+                                handleCopy();
+                                return;
+                            }
                             setAction(actionItem);
-                            if (["rename", "share", "delete", "details"].includes(actionItem.value)) {
+                            if (["rename", "share", "delete", "details", "removeAccess"].includes(actionItem.value)) {
                                 setIsModalOpen(true);
                             }
                         }}>
-                            {actionItem.value === "download" ?
-                                <Link href={`/api/download/${file.bucketFileId}`} download={`${file.name}.${file.extension}`} className="flex items-center gap-2">
+                            {actionItem.value === "download" ? (
+                                <Link href={`/api/download/${file.$id}`} download={`${file.name}.${file.extension}`} className="flex items-center gap-2">
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
                                     {actionItem.label}
-                                </Link> :
+                                </Link>
+                            ) : actionItem.value === "copy" ? (
                                 <div className="flex items-center gap-2">
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
                                     {actionItem.label}
-                                </div>}
+                                    {isLoading && (
+                                        <Image src="/assets/icons/loader.svg" alt="loader" width={16} height={16} className="animate-spin" />
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
+                                    {actionItem.label}
+                                </div>
+                            )}
                         </DropdownMenuItem>
                     ))}
                 </DropdownMenuContent>

@@ -1,11 +1,8 @@
 "use client";
 
-import React from "react";
-
-import { Models } from "node-appwrite";
-import { convertFileSize, formatDateTime } from "@/lib/utils";
-
 import Image from "next/image";
+
+import { convertFileSize, formatDateTime } from "@/lib/utils";
 
 import Thumbnail from "./Thumbnail";
 import FormattedDateTime from "./FormattedDateTime";
@@ -13,7 +10,7 @@ import FormattedDateTime from "./FormattedDateTime";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 
-const ImageThumbnail = ({ file }: { file: Models.Document }) => (
+const ImageThumbnail = ({ file }: { file: SupabaseFile }) => (
     <div className="file-details-thumbnail">
         <Thumbnail type={file.type} extension={file.extension} url={file.url} />
         <div className="flex flex-col">
@@ -36,23 +33,21 @@ const SharedUsersRow = ({ label, values }: { label: string; values: string[] }) 
         <div>
             {values.map((value) => (
                 <p key={value} className="file-details-value text-left text-light-200">{value}</p>
-            )
-            )}
+            ))}
         </div>
     </div>
 );
 
-export const FileDetails = ({ file }: { file: Models.Document }) => {
+export const FileDetails = ({ file }: { file: SupabaseFile }) => {
     return (
         <>
             <ImageThumbnail file={file} />
             <div className="space-y-4 px-2 pt-2">
                 <DetailRow label="Format :" value={file.extension} />
                 <DetailRow label="Size :" value={convertFileSize(file.size)} />
-                <DetailRow label="Owner: " value={file.owner.fullName} />
                 <DetailRow label="Last edit :" value={formatDateTime(file.$updatedAt)} />
-                {file.users.length > 0 && (
-                    <SharedUsersRow label="Sharing to :" values={file.users} />
+                {!file.isSharedWithMe && file.shared_with.length > 0 && (
+                    <SharedUsersRow label="Sharing to :" values={file.shared_with} />
                 )}
             </div>
         </>
@@ -60,7 +55,7 @@ export const FileDetails = ({ file }: { file: Models.Document }) => {
 };
 
 interface Props {
-    file: Models.Document;
+    file: SupabaseFile;
     onInputChange: React.Dispatch<React.SetStateAction<string[]>>;
     onRemove: (email: string) => void;
 }
@@ -69,14 +64,14 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
     return (
         <>
             <ImageThumbnail file={file} />
-            <div className="share-wrapper">
-                <p className="subtitle-2 pl-1 text-light-100">Share file with other users</p>
+            <div className="share-wrapper text-light-100">
+                <p className="subtitle-2 pl-1 ">Share file with other users</p>
                 <Input type="email" placeholder="Enter" className="share-input-field" onChange={(e) => onInputChange(e.target.value.trim().split(","))} />
                 <div className="pt-4">
                     <div className="">
-                        <p className="subtitle-2 text-light-100">Shared with <span className="text-light-200">{file.users.length} user{file.users.length > 1 ? "s" : ""}</span></p>
+                        <p className="subtitle-2">Shared with <span className="text-light-200">{file.shared_with.length} user{file.shared_with.length > 1 ? "s" : ""}</span></p>
                         <ul className="pt-2">
-                            {file.users.map((email: string) => (
+                            {file.shared_with.map((email: string) => (
                                 <li key={email} className="flex items-center justify-between gap-2">
                                     <p className="subtitle-2">{email}</p>
                                     <Button onClick={() => onRemove(email)} className="share-remove-user">

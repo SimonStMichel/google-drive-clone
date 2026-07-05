@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-
 import { navItems } from "@/constants";
-import { signOutUser } from "@/lib/actions/user.actions";
+import { useAuth } from "@/lib/auth/auth-context";
 
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
 
 import {
   Sheet,
@@ -17,11 +17,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
+import { Separator } from "./ui/separator";
 
 import FileUploader from "./FileUploader";
-
 interface Props {
   $id: string;
   accountId: string;
@@ -30,11 +29,18 @@ interface Props {
   email: string;
 }
 
-
 const MobileNavigation = ({ $id: ownerId, accountId, fullName, avatar, email }: Props) => {
 
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/sign-in");
+  };
 
   return (
     <header className="mobile-header">
@@ -70,8 +76,8 @@ const MobileNavigation = ({ $id: ownerId, accountId, fullName, avatar, email }: 
           <Separator className="my-5 bg-light-200/20" />
           <div className="flex flex-col justify-between gap-5 pb-5">
             <FileUploader ownerId={ownerId} accountId={accountId} />
-            <Button type="submit" className="mobile-sign-out-button" onClick={async () => await signOutUser}>
-              <Image src="/assets/icons/logout.svg" alt="logo" width={24} height={24} />
+            <Button type="button" className="mobile-sign-out-button" onClick={handleSignOut}>
+              <Image src="/assets/icons/logout.svg" alt="logout" width={24} height={24} />
               <p>Logout</p>
             </Button>
           </div>

@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { appwriteConfig } from "./appwrite/config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -159,16 +158,6 @@ export const getFileIcon = (
           return "/assets/icons/file-other.svg";
       }
   }
-};
-
-// APPWRITE URL UTILS
-// Construct appwrite file URL - https://appwrite.io/docs/apis/rest#images
-export const constructFileUrl = (fileId: string) => {
-  return `${appwriteConfig.endpointUrl}/storage/buckets/${appwriteConfig.bucketId}/files/${fileId}/view?project=${appwriteConfig.projectId}`;
-};
-
-export const constructDownloadUrl = (bucketFileId: string) => {
-  return `${appwriteConfig.endpointUrl}/storage/buckets/${appwriteConfig.bucketId}/files/${bucketFileId}/download?project=${appwriteConfig.projectId}`;
 };
 
 // DASHBOARD UTILS

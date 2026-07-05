@@ -12,7 +12,6 @@ import Header from "@/components/Header";
 export const dynamic = "force-dynamic";
 
 const Layout = async ({ children }: { children: React.ReactNode }) => {
-
   const currentUser = await getCurrentUser();
 
   if (!currentUser) return redirect("/sign-in");

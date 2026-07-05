@@ -2,10 +2,35 @@
 
 declare type FileType = "document" | "image" | "video" | "audio" | "other";
 
+// Normalised file record returned by file actions (DB row + mapped convenience fields)
+declare interface SupabaseFile {
+  // Raw DB columns
+  id: string;
+  name: string;
+  type: FileType;
+  extension: string;
+  size: number;
+  url: string;
+  bucket_file_id: string;
+  account_id: string;
+  owner: string;
+  shared_with: string[];
+  created_at: string;
+  updated_at: string;
+  // Mapped convenience fields added by mapFileRecord
+  $id: string;
+  bucketFileId: string;
+  accountId: string;
+  $createdAt: string;
+  $updatedAt: string;
+  isSharedWithMe: boolean;
+}
+
 declare interface ActionType {
   label: string;
   icon: string;
   value: string;
+  visibility?: "owner" | "shared";
 }
 
 declare interface SearchParamProps {
@@ -31,13 +56,20 @@ declare interface RenameFileProps {
   path: string;
 }
 declare interface UpdateFileUsersProps {
-  file: Models.Document;
+  file: SupabaseFile;
   emails: string[];
   path: string;
 }
 declare interface DeleteFileProps {
   fileId: string;
-  bucketFileId: string;
+  path: string;
+}
+declare interface CopyFileProps {
+  fileId: string;
+  path: string;
+}
+declare interface RemoveMyAccessProps {
+  fileId: string;
   path: string;
 }
 
@@ -69,7 +101,7 @@ declare interface ThumbnailProps {
 }
 
 declare interface ShareInputProps {
-  file: Models.Document;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  file: SupabaseFile;
+  onInputChange: React.Dispatch<React.SetStateAction<string[]>>;
   onRemove: (email: string) => void;
 }
