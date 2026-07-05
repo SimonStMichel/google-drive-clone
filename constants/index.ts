@@ -26,11 +26,12 @@ export const navItems = [
     },
 ];
 
-export const actionsDropdownItems = [
+export const actionsDropdownItems: ActionType[] = [
     {
         label: "Rename",
         icon: "/assets/icons/edit.svg",
-        value: "rename"
+        value: "rename",
+        visibility: "owner"
     },
     {
         label: "Details",
@@ -40,7 +41,8 @@ export const actionsDropdownItems = [
     {
         label: "Share",
         icon: "/assets/icons/share.svg",
-        value: "share"
+        value: "share",
+        visibility: "owner"
     },
     {
         label: "Download",
@@ -48,9 +50,22 @@ export const actionsDropdownItems = [
         value: "download"
     },
     {
+        label: "Save a Copy",
+        icon: "/assets/icons/copy.svg",
+        value: "copy",
+        visibility: "shared"
+    },
+    {
+        label: "Remove Access",
+        icon: "/assets/icons/remove.svg",
+        value: "removeAccess",
+        visibility: "shared"
+    },
+    {
         label: "Delete",
         icon: "/assets/icons/delete.svg",
-        value: "delete"
+        value: "delete",
+        visibility: "owner"
     },
 ];
 

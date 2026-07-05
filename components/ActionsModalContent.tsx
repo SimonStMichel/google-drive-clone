@@ -46,7 +46,7 @@ export const FileDetails = ({ file }: { file: SupabaseFile }) => {
                 <DetailRow label="Format :" value={file.extension} />
                 <DetailRow label="Size :" value={convertFileSize(file.size)} />
                 <DetailRow label="Last edit :" value={formatDateTime(file.$updatedAt)} />
-                {file.shared_with.length > 0 && (
+                {!file.isSharedWithMe && file.shared_with.length > 0 && (
                     <SharedUsersRow label="Sharing to :" values={file.shared_with} />
                 )}
             </div>
@@ -64,12 +64,12 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
     return (
         <>
             <ImageThumbnail file={file} />
-            <div className="share-wrapper">
-                <p className="subtitle-2 pl-1 text-light-100">Share file with other users</p>
+            <div className="share-wrapper text-light-100">
+                <p className="subtitle-2 pl-1 ">Share file with other users</p>
                 <Input type="email" placeholder="Enter" className="share-input-field" onChange={(e) => onInputChange(e.target.value.trim().split(","))} />
                 <div className="pt-4">
                     <div className="">
-                        <p className="subtitle-2 text-light-100">Shared with <span className="text-light-200">{file.shared_with.length} user{file.shared_with.length > 1 ? "s" : ""}</span></p>
+                        <p className="subtitle-2">Shared with <span className="text-light-200">{file.shared_with.length} user{file.shared_with.length > 1 ? "s" : ""}</span></p>
                         <ul className="pt-2">
                             {file.shared_with.map((email: string) => (
                                 <li key={email} className="flex items-center justify-between gap-2">

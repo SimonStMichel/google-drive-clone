@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, createSessionClient } from "@/lib/supabase/server-client";
 import { supabaseConfig } from "@/lib/supabase/config";
+import { hasFileAccess } from "@/lib/actions/file-access";
 
 const DOWNLOAD_URL_TTL = 60; // seconds
 
@@ -35,12 +36,7 @@ export async function GET(
         return new NextResponse("File not found", { status: 404 });
     }
 
-    const isOwner = file.owner === user.id;
-    // shared_with is stored lowercased on write, so match on the lowercased email.
-    const email = user.email?.toLowerCase();
-    const isShared =
-        Array.isArray(file.shared_with) && !!email && file.shared_with.includes(email);
-    if (!isOwner && !isShared) {
+    if (!hasFileAccess(file, { id: user.id, email: user.email })) {
         return new NextResponse("Forbidden", { status: 403 });
     }
 

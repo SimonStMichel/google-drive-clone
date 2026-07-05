@@ -15,10 +15,48 @@ A Google Drive–style file storage app: upload, preview, download, rename, shar
 
 ## 📋 Table of Contents
 
-1. [Tech Stack](#tech-stack)
-2. [Features](#features)
-3. [Getting Started](#getting-started)
-4. [Architecture](#architecture)
+1. [Project History](#project-history)
+2. [Tech Stack](#tech-stack)
+3. [Features](#features)
+4. [Getting Started](#getting-started)
+5. [Architecture](#architecture)
+
+## <a name="project-history">📖 Project History</a>
+
+This is a portfolio project, not a production app — built to practice a real backend migration
+and to have something concrete to demo. It went through three phases:
+
+**1. The tutorial.** Started from JavaScript Mastery's "Store It" Google Drive clone tutorial,
+built on Next.js + Appwrite (auth, database, storage). Followed it through the core feature
+set: email/password auth, drag-and-drop upload, file listing by type, rename, share-by-email,
+delete, and a storage-usage dashboard.
+
+**2. The Supabase migration.** Once the tutorial was finished, the entire backend was swapped
+from Appwrite to Supabase as a self-directed refactor — not part of the tutorial. This meant:
+- Rebuilding auth (email/password + Google OAuth) on Supabase Auth, including session refresh
+  via Next.js 16 middleware (`proxy.ts`)
+- Replacing Appwrite's document DB with a Postgres `files` table, plus Row Level Security
+  policies as defense-in-depth behind the service-role server actions
+- Replacing Appwrite storage with a private Supabase bucket served entirely through
+  short-lived signed URLs (never a public file URL)
+- Re-deriving every Server Action (`lib/actions/file.actions.ts`) against the new schema, and
+  upgrading the app from Next.js 15 to 16 along the way
+
+**3. Going beyond the tutorial.** With the migration done, the sharing model got a real security
+and UX pass that the original tutorial never had:
+- Found and closed a gap where any user a file was shared with could rename, delete, or
+  re-share someone else's file — these are now locked to the file's owner, enforced
+  server-side (not just hidden in the UI)
+- Added a visual "Shared with you" indicator so shared files are visually distinct from your
+  own
+- Added **Save a Copy**, so a recipient can duplicate a shared file into their own account —
+  it survives the owner deleting the original or revoking access
+- Added **Remove Access**, so a recipient can drop themselves from a share without needing the
+  owner to do it
+- Blocked sharing a file with your own email (a harmless but pointless no-op in the original
+  tutorial code)
+- Redesigned the sign-in screen's Google button and status messages, which had been styled
+  for a dark UI and rendered wrong on this app's light theme
 
 ## <a name="tech-stack">⚙️ Tech Stack</a>
 
@@ -36,8 +74,12 @@ A Google Drive–style file storage app: upload, preview, download, rename, shar
 - **File upload** — drag & drop or picker; 50 MB max; type auto-detected (document / image / video / audio / other)
 - **Preview** — open a file inline in a new tab via a short-lived signed URL
 - **Download** — authorized download route (owner or shared users only)
-- **Rename / Delete**
-- **Sharing** — share a file with other users by email; shared files appear in their account
+- **Rename / Delete** — owner-only, enforced server-side
+- **Sharing** — share a file with other users by email; shared files appear in their account,
+  visually marked "Shared with you", with a restricted action menu (no rename/delete/reshare)
+- **Save a Copy** — a recipient can duplicate a shared file into their own account, independent
+  of the original
+- **Remove Access** — a recipient can drop themselves from a share at any time
 - **Dashboard** — storage-usage chart and per-type summaries
 - **Global search** and **sorting** (name, size, date)
 - **Responsive** layout with a mobile navigation drawer
@@ -186,8 +228,9 @@ Server-side guards (the `(root)` layout, route handlers) call Supabase `auth.get
 
 All file operations are Server Actions using the admin client:
 
-- `file.actions.ts` — `uploadFile`, `getFiles`, `renameFile`, `updateFileUsers`, `deleteFile`, `getTotalSpaceUsed`
+- `file.actions.ts` — `uploadFile`, `getFiles`, `renameFile`, `updateFileUsers`, `deleteFile`, `copyFile`, `removeMyAccess`, `getTotalSpaceUsed`
 - `user.actions.ts` — `getCurrentUser()` maps the Supabase auth user to `{ $id, email, fullName, avatar, accountId }`
+- `file-access.ts` — `hasFileAccess()`, the shared owner-or-shared check reused by `copyFile` and the download route
 
 `mapFileRecord` translates snake_case DB columns to the camelCase / `$`-prefixed shape the UI
 consumes (`$id`, `bucketFileId`, `$createdAt`, `$updatedAt`).
@@ -205,5 +248,15 @@ The storage bucket is **private**; files are never exposed via permanent public 
 ### Sharing
 
 Sharing is keyed by **email**. `updateFileUsers` writes the recipient emails to the
-`shared_with` array, and `getFiles` returns files where the current user is the owner **or** their
-email is in `shared_with`.
+`shared_with` array (dropping the owner's own email if present — sharing with yourself is a
+no-op), and `getFiles` returns files where the current user is the owner **or** their email is
+in `shared_with`, tagging each with `isSharedWithMe` so the UI can tell the two apart.
+
+`renameFile`, `updateFileUsers`, and `deleteFile` fold the owner check directly into their
+`.update()`/`.delete()` query filter (`.eq("owner", currentUser.$id)`) instead of a separate
+fetch-then-check — a non-owner's `fileId` simply matches zero rows — so the client-supplied
+`file`/`fileId` is never trusted for authorization on its own. `copyFile` and the download
+route share a `hasFileAccess()` helper (`lib/actions/file-access.ts`) for the looser
+owner-or-shared read check. Recipients get two actions of their own: `copyFile`
+(storage-to-storage duplicate into their own account, unaffected by the original being
+deleted or unshared) and `removeMyAccess` (drops only their own email from `shared_with`).

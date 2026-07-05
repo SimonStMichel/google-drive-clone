@@ -5,6 +5,7 @@ import { supabaseConfig } from "../supabase/config";
 import { getFileType, parseStringify } from "../utils";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./user.actions";
+import { hasFileAccess } from "./file-access";
 
 const SIGNED_URL_TTL = 60 * 60; // 1 hour
 
@@ -13,9 +14,29 @@ const handleError = (error: unknown, message: string) => {
   throw error;
 };
 
+// PostgREST's code for ".single() matched zero (or more than one) rows" — used
+// below to mean "not found, or found but not yours" without a separate fetch.
+const NO_ROW_MATCHED = "PGRST116";
+
+// Fetches a single file row by id, used by the two actions (copyFile,
+// removeMyAccess) that need more than an ownership check on their own row —
+// copyFile needs the original's metadata, removeMyAccess needs the current
+// shared_with array. rename/share/delete fold their ownership check directly
+// into the mutation's own query filter instead (see below), so they don't need this.
+const fetchFileRow = async <T>(
+  supabase: ReturnType<typeof createAdminClient>,
+  fileId: string,
+  columns: string
+): Promise<T> => {
+  const { data, error } = await supabase.from("files").select(columns).eq("id", fileId).single();
+  if (error) throw error;
+  return data as unknown as T;
+};
+
 // Maps a raw DB row (snake_case) to the shape expected across the UI.
 // `url` is a short-lived signed URL generated at read time (never persisted).
-const mapFileRecord = (item: Record<string, unknown>, signedUrl?: string) => ({
+// `viewerId` (the acting/viewing user's id) drives `isSharedWithMe`.
+const mapFileRecord = (item: Record<string, unknown>, signedUrl?: string, viewerId?: string) => ({
   ...item,
   url: signedUrl ?? (item.url as string | undefined) ?? "",
   $id: item.id,
@@ -23,6 +44,7 @@ const mapFileRecord = (item: Record<string, unknown>, signedUrl?: string) => ({
   accountId: item.account_id ?? item.owner,
   $createdAt: item.created_at,
   $updatedAt: item.updated_at,
+  isSharedWithMe: viewerId ? item.owner !== viewerId : false,
 });
 
 // Generates a signed URL for a single stored object (best-effort).
@@ -75,7 +97,7 @@ export const uploadFile = async ({ file, ownerId, accountId, path }: UploadFileP
     }
 
     revalidatePath(path);
-    return parseStringify(mapFileRecord(newFile, await signOne(supabase, bucketFileId)));
+    return parseStringify(mapFileRecord(newFile, await signOne(supabase, bucketFileId), ownerId));
   } catch (error) {
     handleError(error, "Failed to upload file");
   }
@@ -147,7 +169,7 @@ export const getFiles = async ({
     }
 
     return parseStringify({
-      documents: rows.map((r) => mapFileRecord(r, signedByPath[r.bucket_file_id])),
+      documents: rows.map((r) => mapFileRecord(r, signedByPath[r.bucket_file_id], currentUser.$id)),
       total: rows.length,
     });
   } catch (error) {
@@ -157,17 +179,28 @@ export const getFiles = async ({
 
 export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
   try {
-    const { data: updatedFile, error } = await createAdminClient()
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
+    const supabase = createAdminClient();
+
+    // Ownership is enforced by the `.eq("owner", ...)` filter itself: a non-owner's
+    // fileId simply matches zero rows, which `.single()` reports as PGRST116.
+    const { data: updatedFile, error } = await supabase
       .from("files")
       .update({ name })
       .eq("id", fileId)
+      .eq("owner", currentUser.$id)
       .select("*")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === NO_ROW_MATCHED) throw new Error("Only the file owner can rename this file");
+      throw error;
+    }
 
     revalidatePath(path);
-    return parseStringify(mapFileRecord(updatedFile));
+    return parseStringify(mapFileRecord(updatedFile, undefined, currentUser.$id));
   } catch (error) {
     handleError(error, "Failed to rename file");
   }
@@ -175,38 +208,166 @@ export const renameFile = async ({ fileId, name, path }: RenameFileProps) => {
 
 export const updateFileUsers = async ({ file, emails, path }: UpdateFileUsersProps) => {
   try {
-    const { data: updatedFile, error } = await createAdminClient()
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
+    const supabase = createAdminClient();
+
+    // Sharing a file with its own owner is a no-op — drop it rather than storing it.
+    // Computed from `currentUser.email` (server-authoritative), not a client guess,
+    // so the caller can reliably tell the user this happened via `selfShareBlocked`.
+    const ownerEmail = currentUser.email.toLowerCase();
+    const filteredEmails = emails.filter((e) => e.toLowerCase() !== ownerEmail);
+    const selfShareBlocked = filteredEmails.length !== emails.length;
+
+    // Ownership enforced via the `.eq("owner", ...)` filter, not a separate fetch —
+    // never trusts the client-supplied `file.owner`.
+    const { data: updatedFile, error } = await supabase
       .from("files")
-      .update({ shared_with: emails })
+      .update({ shared_with: filteredEmails })
       .eq("id", file.$id)
+      .eq("owner", currentUser.$id)
       .select("*")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === NO_ROW_MATCHED) throw new Error("Only the file owner can share this file");
+      throw error;
+    }
 
     revalidatePath(path);
-    return parseStringify(mapFileRecord(updatedFile));
+    return parseStringify({
+      ...mapFileRecord(updatedFile, undefined, currentUser.$id),
+      selfShareBlocked,
+    });
   } catch (error) {
     handleError(error, "Failed to update users list");
   }
 };
 
-export const deleteFile = async ({ fileId, bucketFileId, path }: DeleteFileProps) => {
+// Lets a non-owner recipient drop themselves from `shared_with` without needing the
+// owner to do it. Only removes the caller's own email — never touches other recipients.
+export const removeMyAccess = async ({ fileId, path }: RemoveMyAccessProps) => {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
     const supabase = createAdminClient();
 
-    const { error: deleteError } = await supabase.from("files").delete().eq("id", fileId);
-    if (deleteError) throw deleteError;
+    const existing = await fetchFileRow<Pick<SupabaseFile, "owner" | "shared_with">>(
+      supabase,
+      fileId,
+      "owner, shared_with"
+    );
+
+    if (existing.owner === currentUser.$id) {
+      throw new Error("Owners cannot remove their own access — delete the file instead");
+    }
+
+    const email = currentUser.email.toLowerCase();
+    if (!Array.isArray(existing.shared_with) || !existing.shared_with.includes(email)) {
+      throw new Error("You do not have access to this file");
+    }
+
+    const { error } = await supabase
+      .from("files")
+      .update({ shared_with: existing.shared_with.filter((e: string) => e !== email) })
+      .eq("id", fileId);
+    if (error) throw error;
+
+    revalidatePath(path);
+    return parseStringify({ status: "success" });
+  } catch (error) {
+    handleError(error, "Failed to remove access");
+  }
+};
+
+export const deleteFile = async ({ fileId, path }: DeleteFileProps) => {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
+    const supabase = createAdminClient();
+
+    // Delete-with-ownership-filter, returning the deleted row's bucket_file_id —
+    // one round trip instead of fetch-then-delete, and still never trusts a
+    // client-supplied bucket path.
+    const { data: deletedFile, error: deleteError } = await supabase
+      .from("files")
+      .delete()
+      .eq("id", fileId)
+      .eq("owner", currentUser.$id)
+      .select("bucket_file_id")
+      .single();
+
+    if (deleteError) {
+      if (deleteError.code === NO_ROW_MATCHED) throw new Error("Only the file owner can delete this file");
+      throw deleteError;
+    }
 
     const { error: storageError } = await supabase.storage
       .from(supabaseConfig.bucket)
-      .remove([bucketFileId]);
+      .remove([deletedFile.bucket_file_id]);
     if (storageError) throw storageError;
 
     revalidatePath(path);
     return parseStringify({ status: "success" });
   } catch (error) {
     handleError(error, "Failed to delete file");
+  }
+};
+
+export const copyFile = async ({ fileId, path }: CopyFileProps) => {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
+    const supabase = createAdminClient();
+
+    const original = await fetchFileRow<
+      Pick<SupabaseFile, "owner" | "shared_with" | "bucket_file_id" | "type" | "name" | "extension" | "size">
+    >(supabase, fileId, "*");
+
+    // Same "does this user have access" rule the download route uses.
+    if (!hasFileAccess(original, { id: currentUser.$id, email: currentUser.email })) {
+      throw new Error("You do not have access to this file");
+    }
+
+    const newBucketFileId = crypto.randomUUID();
+
+    const { error: copyError } = await supabase.storage
+      .from(supabaseConfig.bucket)
+      .copy(original.bucket_file_id, newBucketFileId);
+    if (copyError) throw copyError;
+
+    const fileDocument = {
+      type: original.type,
+      name: `Copy of ${original.name}`,
+      extension: original.extension,
+      size: original.size,
+      owner: currentUser.$id,
+      account_id: currentUser.accountId,
+      shared_with: [],
+      bucket_file_id: newBucketFileId,
+    };
+
+    const { data: newFile, error: insertError } = await supabase
+      .from("files")
+      .insert([fileDocument])
+      .select("*")
+      .single();
+
+    if (insertError) {
+      await supabase.storage.from(supabaseConfig.bucket).remove([newBucketFileId]);
+      return handleError(insertError, "Failed to save file copy");
+    }
+
+    revalidatePath(path);
+    return parseStringify(
+      mapFileRecord(newFile, await signOne(supabase, newBucketFileId), currentUser.$id)
+    );
+  } catch (error) {
+    handleError(error, "Failed to save a copy of file");
   }
 };
 

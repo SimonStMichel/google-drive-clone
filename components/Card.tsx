@@ -18,6 +18,7 @@ const Card = ({ file }: { file: SupabaseFile }) => {
           <p className="body-1">{convertFileSize(file.size)}</p>
         </div>
       </div>
+      {file.isSharedWithMe && <span className="shared-badge">Shared with you</span>}
       <div className="file-card-details">
         <p className="subtitle-2 line-clamp-1">{file.name}</p>
         <FormattedDateTime date={file.$createdAt} className="body-2 text-light-100" />

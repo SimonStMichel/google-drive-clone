@@ -68,12 +68,24 @@ do **not** use `AuthContext`.
 All file operations are Next.js Server Actions (`"use server"`) using `createAdminClient()`
 (service role), so they bypass RLS.
 
-- `file.actions.ts` — `uploadFile`, `getFiles`, `renameFile`, `updateFileUsers`, `deleteFile`, `getTotalSpaceUsed`
+- `file.actions.ts` — `uploadFile`, `getFiles`, `renameFile`, `updateFileUsers`, `deleteFile`,
+  `copyFile`, `removeMyAccess`, `getTotalSpaceUsed`
 - `user.actions.ts` — `getCurrentUser()` maps the Supabase auth user to `{ $id, email, fullName, avatar, accountId }`
+- `file-access.ts` — `hasFileAccess()`, the shared owner-or-shared read-access check used by
+  both `copyFile` and `app/api/download/[fileId]/route.ts`. Not a Server Action itself (no
+  `"use server"`), so a Route Handler can import it directly.
 
 **`mapFileRecord`** in `file.actions.ts` translates snake_case DB columns to the camelCase /
 `$`-prefixed fields the UI expects (`$id`, `bucketFileId`, `accountId`, `$createdAt`, `$updatedAt`)
-— a legacy of the original Appwrite document shape.
+— a legacy of the original Appwrite document shape — and also computes `isSharedWithMe`
+(`owner !== viewerId`) from an optional `viewerId` argument, so the UI can tell files you own
+apart from files shared with you.
+
+**Ownership enforcement:** `renameFile`, `updateFileUsers`, and `deleteFile` fold the
+`owner = current user` check directly into their `.update()`/`.delete()` query filter (a
+non-owner's `fileId` simply matches zero rows, surfaced as PostgREST's `PGRST116`) rather than
+doing a separate fetch-then-check — the client-supplied `file`/`fileId` is never trusted for
+authorization on its own.
 
 ### Database
 

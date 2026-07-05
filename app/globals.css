@@ -380,6 +380,40 @@
     @apply primary-btn h-[66px] !important;
   }
 
+  .google-signin-button {
+    @apply flex h-[56px] w-full items-center justify-center gap-3 rounded-full border border-light-300 bg-white text-[14px] font-medium leading-[20px] text-light-100 shadow-drop-1 transition-all hover:bg-light-400 hover:shadow-drop-3 disabled:pointer-events-none disabled:opacity-60 !important;
+  }
+
+  .status-banner-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 250ms ease;
+  }
+
+  .status-banner-wrapper.is-visible {
+    grid-template-rows: 1fr;
+  }
+
+  .status-banner-inner {
+    overflow: hidden;
+  }
+
+  .status-banner {
+    @apply body-2 flex items-center gap-2 rounded-xl px-4 py-3 font-medium !important;
+  }
+
+  .status-banner--loading {
+    @apply bg-brand/10 text-brand-100 !important;
+  }
+
+  .status-banner--success {
+    @apply bg-emerald-50 text-emerald-700 !important;
+  }
+
+  .status-banner--error {
+    @apply bg-error/5 text-error !important;
+  }
+
   .error-message {
     @apply body-2 mx-auto w-fit rounded-xl bg-error/5 px-8 py-4 text-center text-error !important;
   }
@@ -387,6 +421,10 @@
   /* Card */
   .file-card {
     @apply flex cursor-pointer flex-col gap-6 rounded-[18px] bg-white p-5 shadow-sm transition-all hover:shadow-drop-3 !important;
+  }
+
+  .shared-badge {
+    @apply w-fit rounded-full bg-brand/10 px-3 py-1 text-[11px] font-medium text-brand !important;
   }
 
   .file-card-details {

@@ -23,12 +23,14 @@ declare interface SupabaseFile {
   accountId: string;
   $createdAt: string;
   $updatedAt: string;
+  isSharedWithMe: boolean;
 }
 
 declare interface ActionType {
   label: string;
   icon: string;
   value: string;
+  visibility?: "owner" | "shared";
 }
 
 declare interface SearchParamProps {
@@ -60,7 +62,14 @@ declare interface UpdateFileUsersProps {
 }
 declare interface DeleteFileProps {
   fileId: string;
-  bucketFileId: string;
+  path: string;
+}
+declare interface CopyFileProps {
+  fileId: string;
+  path: string;
+}
+declare interface RemoveMyAccessProps {
+  fileId: string;
   path: string;
 }
 

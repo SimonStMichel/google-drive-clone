@@ -7,7 +7,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 import { actionsDropdownItems } from "@/constants";
-import { renameFile, deleteFile, updateFileUsers } from "@/lib/actions/file.actions";
+import { renameFile, deleteFile, updateFileUsers, copyFile, removeMyAccess } from "@/lib/actions/file.actions";
+import { useToast } from "@/hooks/use-toast";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -25,6 +26,7 @@ import {
 
 const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     const path = usePathname();
+    const { toast } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -33,12 +35,27 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [emails, setEmails] = useState<string[]>([]);
 
+    const visibleItems = actionsDropdownItems.filter((item) => {
+        if (item.visibility === "owner") return !file.isSharedWithMe;
+        if (item.visibility === "shared") return file.isSharedWithMe;
+        return true;
+    });
+
     const closeAllModals = () => {
         setIsModalOpen(false);
         setIsDropdownOpen(false);
         setAction(null);
         setName(file.name);
         setEmails([]);
+    };
+
+    const showErrorToast = (error: unknown, fallback: string) => {
+        toast({
+            description: (
+                <p className="body-2 text-white">{error instanceof Error ? error.message : fallback}</p>
+            ),
+            className: "error-toast",
+        });
     };
 
     const handleAction = async () => {
@@ -49,23 +66,59 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
         const actions: Record<string, () => Promise<unknown>> = {
             rename: () => renameFile({ fileId: file.$id, name, path }),
             share: () => handleAddUser(),
-            delete: () => deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
+            delete: () => deleteFile({ fileId: file.$id, path }),
+            removeAccess: () => removeMyAccess({ fileId: file.$id, path }),
         };
 
-        const handler = actions[action.value];
-        const success = handler ? await handler() : false;
+        try {
+            const handler = actions[action.value];
+            const success = handler ? await handler() : false;
 
-        if (success) closeAllModals();
-        setIsLoading(false);
+            if (success) closeAllModals();
+        } catch (error) {
+            showErrorToast(error, "Something went wrong");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleAddUser = async () => {
-        // Merge newly typed emails into the existing share list (dedupe, drop blanks)
+        // Merge newly typed emails into the existing share list (dedupe, drop blanks).
+        // The server strips the owner's own email (sharing with yourself is a no-op)
+        // and reports back whether it did, via `selfShareBlocked` — driving the toast
+        // off that server-authoritative flag instead of a client-side email guess.
         const newEmails = emails.map((e) => e.trim().toLowerCase()).filter(Boolean);
         const merged = Array.from(new Set([...(file.shared_with ?? []), ...newEmails]));
 
-        const success = await updateFileUsers({ file, emails: merged, path });
-        return success;
+        const result = await updateFileUsers({ file, emails: merged, path });
+
+        if (result?.selfShareBlocked) {
+            toast({
+                description: (
+                    <p className="body-2 text-white">You already have access — no need to share with yourself</p>
+                ),
+                className: "error-toast",
+            });
+        }
+
+        return result;
+    };
+
+    const handleCopy = async () => {
+        setIsLoading(true);
+
+        try {
+            await copyFile({ fileId: file.$id, path });
+            setIsDropdownOpen(false);
+            toast({
+                description: <p className="body-2 text-white">Saved a copy to your files</p>,
+            });
+        } catch (error) {
+            setIsDropdownOpen(false);
+            showErrorToast(error, "Could not save a copy");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleRemoveUser = async (email: string) => {
@@ -89,12 +142,15 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
                     {value === "delete" && (
                         <p className="delete-confirmation">Are you sure you want to delete{" "}<span className="delete-file-name">{file.name}</span>?</p>
                     )}
+                    {value === "removeAccess" && (
+                        <p className="delete-confirmation">Remove your access to{" "}<span className="delete-file-name">{file.name}</span>? You&apos;ll need to be shared with again to see it.</p>
+                    )}
                 </DialogHeader>
-                {["rename", "delete", "share"].includes(value) && (
+                {["rename", "delete", "share", "removeAccess"].includes(value) && (
                     <DialogFooter className="flex flex-col gap-3 md:flex-row">
                         <Button onClick={closeAllModals} className="modal-cancel-button">Cancel</Button>
                         <Button onClick={handleAction} className="modal-submit-button">
-                            <p className="capitalize">{value}</p>
+                            <p>{label}</p>
                             {isLoading && (
                                 <Image src="/assets/icons/loader.svg" alt="loader" width={24} height={24} className="animate-spin" />
                             )}
@@ -116,10 +172,14 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
                         {file.name}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {actionsDropdownItems.map((actionItem) => (
+                    {visibleItems.map((actionItem) => (
                         <DropdownMenuItem key={actionItem.value} className="shad-dropdown-item" onClick={() => {
+                            if (actionItem.value === "copy") {
+                                handleCopy();
+                                return;
+                            }
                             setAction(actionItem);
-                            if (["rename", "share", "delete", "details"].includes(actionItem.value)) {
+                            if (["rename", "share", "delete", "details", "removeAccess"].includes(actionItem.value)) {
                                 setIsModalOpen(true);
                             }
                         }}>
@@ -128,6 +188,14 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
                                     {actionItem.label}
                                 </Link>
+                            ) : actionItem.value === "copy" ? (
+                                <div className="flex items-center gap-2">
+                                    <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
+                                    {actionItem.label}
+                                    {isLoading && (
+                                        <Image src="/assets/icons/loader.svg" alt="loader" width={16} height={16} className="animate-spin" />
+                                    )}
+                                </div>
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Image src={actionItem.icon} alt={actionItem.label} width={30} height={30} />
