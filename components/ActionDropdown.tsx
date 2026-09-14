@@ -85,7 +85,7 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     const handleAddUser = async () => {
         // Merge newly typed emails into the existing share list (dedupe, drop blanks).
         // The server strips the owner's own email (sharing with yourself is a no-op)
-        // and reports back whether it did, via `selfShareBlocked` — driving the toast
+        // and reports back whether it did, via `selfShareBlocked` - driving the toast
         // off that server-authoritative flag instead of a client-side email guess.
         const newEmails = emails.map((e) => e.trim().toLowerCase()).filter(Boolean);
         const merged = Array.from(new Set([...(file.shared_with ?? []), ...newEmails]));
@@ -95,7 +95,7 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
         if (result?.selfShareBlocked) {
             toast({
                 description: (
-                    <p className="body-2 text-white">You already have access — no need to share with yourself</p>
+                    <p className="body-2 text-white">You already have access - no need to share with yourself</p>
                 ),
                 className: "error-toast",
             });
@@ -162,9 +162,24 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
     };
 
     return (
+        // Both call sites (Card, and the dashboard's recent-files list) render this
+        // inside the file's own <Link>. Radix portals the menu and the dialog to the
+        // document body, so clicks in them never reach that anchor in the DOM - but
+        // React still replays them up the component tree, which would fire the Link's
+        // handler and navigate away mid-rename. stopPropagation here cuts that off
+        // while leaving the Download item's own anchor free to navigate.
+        <div onClick={(e) => e.stopPropagation()}>
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-                <DropdownMenuTrigger className="shad-no-focus">
+                {/* The trigger, unlike the portalled content, really is inside the
+                    anchor - so it also has to suppress the browser's own navigation. */}
+                <DropdownMenuTrigger
+                    className="shad-no-focus"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
+                >
                     <Image src="/assets/icons/dots.svg" alt="dots" width={34} height={34} />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -208,6 +223,7 @@ const ActionDropdown = ({ file }: { file: SupabaseFile }) => {
             </DropdownMenu>
             {renderDialogContent()}
         </Dialog>
+        </div>
     );
 };
 

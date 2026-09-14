@@ -18,6 +18,67 @@
     "semi": [
       "error",
       "always"
-    ]
-  }
+    ],
+    "no-unused-vars": "off"
+  },
+  "settings": {
+    "tailwindcss": {
+      "whitelist": [
+        "shad-.*",
+        "sidebar.*",
+        "mobile-.*",
+        "file-.*",
+        "recent-file-.*",
+        "uploader-.*",
+        "preview-item-name",
+        "search.*",
+        "empty-.*",
+        "chart.*",
+        "polar-grid",
+        "dashboard-.*",
+        "summary-type-.*",
+        "total-size-section",
+        "sort-.*",
+        "auth-form",
+        "form-title",
+        "form-submit-button",
+        "status-banner.*",
+        "google-signin-button",
+        "error-toast",
+        "shared-badge",
+        "share-.*",
+        "delete-confirmation",
+        "delete-file-name",
+        "modal-.*",
+        "header.*",
+        "main-content",
+        "page-container",
+        "nav-icon.*",
+        "thumbnail.*",
+        "remove-icon",
+        "sign-out-button",
+        "body-1",
+        "body-2",
+        "caption",
+        "subtitle-1",
+        "subtitle-2",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "destructive"
+      ]
+    }
+  },
+  "overrides": [
+    {
+      "files": [
+        "components/ui/**"
+      ],
+      "rules": {
+        "tailwindcss/no-custom-classname": "off"
+      }
+    }
+  ]
 }

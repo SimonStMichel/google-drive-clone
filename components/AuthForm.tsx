@@ -25,23 +25,20 @@ interface StatusMessage {
   text: string;
 }
 
-const authFormSchema = (formType: FormType) => {
-  const baseSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(8).max(50)
-  });
+// One schema covers both forms: `fullName` is optional and only rendered on
+// sign-up, so branching the schema by form type would change nothing about what
+// gets validated - but it does split the inferred value type in two, which is
+// what `useForm` needs to stay consistent across both variants.
+const authFormSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8).max(50),
+  fullName: z.string().optional()
+});
 
-  if (formType === "sign-up") {
-    return baseSchema.extend({
-      fullName: z.string().optional()
-    });
-  }
-
-  return baseSchema;
-};
+type AuthFormValues = z.infer<typeof authFormSchema>;
 
 const AuthForm = ({ type }: { type: FormType }) => {
-  // Separate flags so submitting one button doesn't show the other's spinner —
+  // Separate flags so submitting one button doesn't show the other's spinner -
   // both still disable together to prevent firing both auth flows at once.
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -51,13 +48,12 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
   const { signInEmailPassword, signUpEmailPassword, signInWithGoogle } = useAuth();
 
-  const formSchema = authFormSchema(type);
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<AuthFormValues>({
+    resolver: zodResolver(authFormSchema),
     defaultValues: {
       email: "",
       password: "",
-      ...(type === "sign-up" && { fullName: "" })
+      fullName: ""
     },
   });
 
@@ -70,7 +66,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     setIsGoogleLoading(false);
   };
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: AuthFormValues) => {
     setIsSubmitting(true);
 
     if (!values.email || !values.password) {

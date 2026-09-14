@@ -64,7 +64,7 @@ export const getFileType = (fileName: string) => {
 };
 
 export const formatDateTime = (isoString: string | null | undefined) => {
-  if (!isoString) return "—";
+  if (!isoString) return "-";
 
   const date = new Date(isoString);
 
@@ -161,7 +161,15 @@ export const getFileIcon = (
 };
 
 // DASHBOARD UTILS
-export const getUsageSummary = (totalSpace: any) => {
+
+// The shape returned by `getTotalSpaceUsed`: a per-type tally plus the running
+// total and the quota.
+export type TotalSpace = Record<FileType, { size: number; latestDate: string }> & {
+  used: number;
+  all: number;
+};
+
+export const getUsageSummary = (totalSpace: TotalSpace) => {
   return [
     {
       title: "Documents",
@@ -197,7 +205,10 @@ export const getUsageSummary = (totalSpace: any) => {
   ];
 };
 
-export const getFileTypesParams = (type: string) => {
+// Returns null for a segment that isn't one of the four listing pages, so the
+// route can 404 rather than silently rendering the Documents list under whatever
+// heading the URL happened to contain.
+export const getFileTypesParams = (type: string): FileType[] | null => {
   switch (type) {
     case "documents":
       return ["document"];
@@ -208,6 +219,6 @@ export const getFileTypesParams = (type: string) => {
     case "others":
       return ["other"];
     default:
-      return ["document"];
+      return null;
   }
 };

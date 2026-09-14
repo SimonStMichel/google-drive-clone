@@ -1,15 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { redirect } from "next/navigation";
+
 import ActionDropdown from "@/components/ActionDropdown";
 import { Chart } from "@/components/Chart";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import Thumbnail from "@/components/Thumbnail";
 import { Separator } from "@/components/ui/separator";
 import { getFiles, getTotalSpaceUsed } from "@/lib/actions/file.actions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { convertFileSize, getUsageSummary } from "@/lib/utils";
 
 const Dashboard = async () => {
+  // Layouts and pages render in parallel in the App Router, so the (root) layout's
+  // redirect does not stop this page from running its queries. Without its own guard
+  // the data layer throws "User not found" on every logged-out request - the visitor
+  // still gets redirected, but the server logs an error for a perfectly normal visit.
+  if (!(await getCurrentUser())) redirect("/sign-in");
+
   const [files, totalSpace] = await Promise.all([
     getFiles({ types: [], limit: 10 }),
     getTotalSpaceUsed(),

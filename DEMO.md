@@ -1,73 +1,131 @@
-# Demo Script
+# Demo
 
-A recording script for a ~3–4 minute portfolio walkthrough of this project. Follow it in
-order; each step lists the action to perform and the one-line point to make while doing it.
+**English** | [Français](./DEMO.fr.md)
 
-## Before you hit record
+Every feature in StoreIt, recorded end to end in a single session against the live Supabase
+project. Two real accounts appear throughout:
 
-- [ ] `npm run dev`, app open at `http://localhost:3000`
-- [ ] Two accounts ready: your main account (**Owner**) and a second one (**Recipient**) —
-      easiest as two browser windows: a normal window + an Incognito/Private window, so both
-      sessions stay logged in independently
-- [ ] A couple of sample files on your desktop ready to drag in: one image (for the thumbnail
-      preview) and one PDF or doc (for a "document" type)
-- [ ] Window sized to something recordable (e.g. 1440×900), zoom level checked so text is
-      legible in the recording
+- **Owner** `simonstmichel23@gmail.com`, signed in with Google
+- **Recipient** `simonstmichel@outlook.com`, signed in with email and password
 
-## Script
+## Full walkthrough
 
-**1. Sign-in screen (Owner window)**
-- Show the sign-in page.
-- Point out: email/password sign-in, and the Google sign-in button — this is a Supabase Auth
-  integration (email/password + OAuth), not the original tutorial's Appwrite auth.
-- Sign in as the Owner account.
+A 2:27 reel of all sixteen features in order, with each one labelled as it appears.
 
-**2. Upload + Dashboard**
-- Drag the sample image and PDF onto the uploader.
-- Point out: thumbnail generation for the image, and the file lands correctly typed
-  (image/document) without a page reload.
-- Navigate to the dashboard: point out the storage-usage chart and the per-type summary cards.
+**[docs/demo/storeit-demo.mp4](docs/demo/storeit-demo.mp4)**
 
-**3. Search and sort**
-- Type part of a filename into the global search — show it filtering live.
-- Open the sort dropdown on a file-type page (e.g. Documents) — sort by name/size/date.
+The clips below are the same footage, split by feature.
 
-**4. Share a file (still Owner)**
-- Open a file's `···` menu → **Share**.
-- Type the Recipient's email, submit.
-- Call out: try adding your own email too — show the toast blocking it
-  ("You already have access — no need to share with yourself").
+---
 
-**5. Switch to the Recipient window**
-- Sign in as the Recipient (or refresh if already signed in).
-- Navigate to the shared file's type page (or Dashboard's recent list).
-- Point out the **"Shared with you"** badge — this distinguishes it from files the recipient
-  owns.
-- Open the `···` menu on that file: point out the menu is *different* from the owner's —
-  only Details / Download / **Save a Copy** / **Remove Access**, no Rename/Share/Delete.
-  Mention this used to be a real gap (any recipient could rename/delete/reshare the owner's
-  file server-side) that's now locked down.
+## Authentication
 
-**6. Save a Copy**
-- Click **Save a Copy**. Show the toast confirmation and the new independent file appearing
-  (no "Shared with you" badge — it's now fully owned by the Recipient).
-- Point out: this is a storage-to-storage copy, and the new copy survives even if the Owner
-  later deletes the original or revokes the share.
+### Email and Google sign-in
 
-**7. Remove Access**
-- On the *original* shared file (not the copy), open `···` → **Remove Access** → confirm.
-- Show the file disappearing from the Recipient's list — they've voluntarily dropped the
-  share without needing the Owner to do it.
+![Sign in with Google](docs/demo/google-signin.gif)
 
-**8. Back to Owner — rename/delete + download**
-- Switch back to the Owner window.
-- Rename a file, then open it via Download and show the browser downloading through the
-  authorized `/api/download/[fileId]` route (signed URL, not a public link).
-- Delete a file, show it's gone from both storage and the list.
+Supabase Auth handles both providers. Email sign-up sends a confirmation link before the account
+becomes usable, and Google OAuth round-trips through `app/auth/callback` to exchange the code for
+a session. The clip above follows the Google path, from signing out to landing in a second, empty
+account. The email path, including the confirmation message, is in the full reel.
 
-## Optional closing beat
+---
 
-- Briefly mention the project's arc if narrating: started from a JavaScript Mastery tutorial
-  on Appwrite, migrated the entire backend to Supabase (Postgres + RLS, private storage bucket
-  + signed URLs, Supabase Auth), then extended sharing with the ownership lock-down, shared
-  badge, Save a Copy, and Remove Access — none of which were in the original tutorial.
+## Working with files
+
+### Upload
+
+![Upload files](docs/demo/upload.gif)
+
+Drag and drop or the file picker, several files at once, each with its own progress row. The file
+type is detected from the extension and the storage chart updates without a page reload. Files up
+to 50 MB are accepted.
+
+### Browse by type
+
+![Browse by file type](docs/demo/browse.gif)
+
+Documents, images, media and others are separate routes backed by one dynamic segment. Each page
+shows its own total and a sort control for name, size and date.
+
+### Search
+
+![Search](docs/demo/search.gif)
+
+Global search filters as you type, debounced, and jumps straight to the matching file's type page.
+
+### Preview
+
+![Preview a file](docs/demo/preview.gif)
+
+Clicking a file opens it inline. The bucket is private, so what the browser receives is a signed
+URL generated server-side at read time and good for one hour. There is no permanent public file
+URL anywhere in the app.
+
+### File details
+
+![File details](docs/demo/details.gif)
+
+Format, size, last edit, and the list of accounts the file is currently shared with. This is the
+quickest way to confirm a share landed.
+
+### Rename
+
+![Rename a file](docs/demo/rename.gif)
+
+Owner only. The ownership test is folded into the update query itself, so a request from anyone
+else matches zero rows rather than being filtered out in the interface.
+
+### Delete
+
+![Delete a file](docs/demo/delete.gif)
+
+Removes the database row and the stored object together, and the usage total drops to match.
+
+---
+
+## Sharing and access control
+
+### Share a file
+
+![Share with another account](docs/demo/share.gif)
+
+The owner shares by email address. Addresses are lowercased and de-duplicated on the server, so a
+mixed-case address still matches on read, and sharing a file with yourself is rejected.
+
+### Shared with you
+
+![Shared with you](docs/demo/shared-with-you.gif)
+
+Now from the recipient's side. The file sits in their dashboard behind a **Shared with you**
+badge, and opening its menu shows what a non-owner is allowed to do: Details, Download, Save a
+Copy, Remove Access. Rename, Share and Delete are simply not there.
+
+Compare that with the owner's menu in the rename and details clips above, which has all five. In
+the tutorial this project started from, a recipient got the full menu and could rename, delete or
+re-share a file they did not own. The restriction is enforced in the server action, not just in
+the rendered list.
+
+### Save a copy
+
+![Save a copy](docs/demo/save-a-copy.gif)
+
+Taking **Save a Copy** from that same menu duplicates the file storage-to-storage. The copy lands
+in the recipient's list with no badge, because they now own it outright, and the usage total
+climbs from 0.17% to 0.57% because it counts against their quota rather than the owner's.
+
+### Revoke access
+
+![Revoke access](docs/demo/revoke-access.gif)
+
+Back in the owner's account. Their menu still has the full five options. Opening **Share** shows
+the file is shared with one user, and clicking the remove button next to the address drops them
+immediately, without a separate save step. Reopening the dialog confirms it now reads shared with
+zero users.
+
+### The revocation lands
+
+![Copy survives revocation](docs/demo/revoke-effect.gif)
+
+Back in the recipient's account the shared file is gone, while the copy they saved is untouched
+and carries the full owner menu. That is the whole ownership model in one screen.

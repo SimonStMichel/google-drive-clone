@@ -29,7 +29,13 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export const Chart = ({ used = 0 }: { used: number }) => {
-    const chartData = [{ storage: "used", 10: used, fill: "white" }];
+    const chartData = [{ storage: "used", value: used, fill: "white" }];
+
+    // Sweep the arc clockwise from 12 o'clock, a full turn at 100% of the quota.
+    // The old form added the raw percentage to the start angle, so a completely
+    // full account drew only a 100°-of-360° arc.
+    const percentUsed = Math.min(calculatePercentage(used), 100);
+    const endAngle = 90 - (percentUsed / 100) * 360;
 
     return (
         <Card className="chart">
@@ -38,7 +44,7 @@ export const Chart = ({ used = 0 }: { used: number }) => {
                     <RadialBarChart
                         data={chartData}
                         startAngle={90}
-                        endAngle={Number(calculatePercentage(used)) + 90}
+                        endAngle={endAngle}
                         innerRadius={80}
                         outerRadius={110}
                     >
@@ -49,7 +55,7 @@ export const Chart = ({ used = 0 }: { used: number }) => {
                             className="polar-grid"
                             polarRadius={[86, 74]}
                         />
-                        <RadialBar dataKey="storage" background cornerRadius={10} />
+                        <RadialBar dataKey="value" background cornerRadius={10} />
                         <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
                             <Label
                                 content={({ viewBox }) => {
@@ -66,11 +72,7 @@ export const Chart = ({ used = 0 }: { used: number }) => {
                                                     y={viewBox.cy}
                                                     className="chart-total-percentage"
                                                 >
-                                                    {used && calculatePercentage(used)
-                                                        ? calculatePercentage(used)
-                                                            .toString()
-                                                            .replace(/^0+/, "")
-                                                        : "0"}
+                                                    {percentUsed || "0"}
                                                     %
                                                 </tspan>
                                                 <tspan

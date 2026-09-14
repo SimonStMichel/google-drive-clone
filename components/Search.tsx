@@ -28,15 +28,25 @@ const Search = () => {
       if (debouncedQuery.length === 0) {
         setResults([]);
         setOpen(false);
-        return router.push(path.replace(searchParams.toString(), ""));
+        // Drop the ?query= filter, but only when one is actually applied - an
+        // unconditional push fired a navigation on every mount of every page.
+        if (searchQuery) router.push(path);
+        return;
       }
 
-      const files = await getFiles({ types: [], searchText: debouncedQuery });
-      setResults(files.documents);
+      try {
+        const files = await getFiles({ types: [], searchText: debouncedQuery });
+        setResults(files?.documents ?? []);
+      } catch {
+        setResults([]);
+      }
       setOpen(true);
     };
 
     fetchFiles();
+    // Deliberately keyed on the typed query alone. Re-running on navigation would
+    // re-open the results dropdown right after a result was clicked.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuery]);
 
   useEffect(() => {

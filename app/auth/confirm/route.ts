@@ -5,20 +5,20 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
-    const token_hash = searchParams.get("token_hash");
+    const tokenHash = searchParams.get("token_hash");
     const type = searchParams.get("type") as EmailOtpType | null;
     const next = searchParams.get("next") ?? "/";
-    if (token_hash && type) {
+    if (tokenHash && type) {
         const supabase = await createSupabaseServerClient();
         const { error } = await supabase.auth.verifyOtp({
             type,
-            token_hash,
+            token_hash: tokenHash,
         });
         if (!error) {
             // redirect user to specified redirect URL or root of app
             redirect(next);
         }
     }
-    // verification failed — send the user back to sign in
+    // verification failed - send the user back to sign in
     redirect("/sign-in");
 }

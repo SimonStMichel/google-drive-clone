@@ -69,7 +69,7 @@ export const ShareInput = ({ file, onInputChange, onRemove }: Props) => {
                 <Input type="email" placeholder="Enter" className="share-input-field" onChange={(e) => onInputChange(e.target.value.trim().split(","))} />
                 <div className="pt-4">
                     <div className="">
-                        <p className="subtitle-2">Shared with <span className="text-light-200">{file.shared_with.length} user{file.shared_with.length > 1 ? "s" : ""}</span></p>
+                        <p className="subtitle-2">Shared with <span className="text-light-200">{file.shared_with.length} user{file.shared_with.length === 1 ? "" : "s"}</span></p>
                         <ul className="pt-2">
                             {file.shared_with.map((email: string) => (
                                 <li key={email} className="flex items-center justify-between gap-2">

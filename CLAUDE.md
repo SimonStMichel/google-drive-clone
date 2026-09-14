@@ -23,7 +23,7 @@ Required in `.env.local` (see `.env.example`):
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=   # anon / publishable key
-SUPABASE_SECRET_KEY=                    # service-role key — server-side ONLY, never NEXT_PUBLIC_
+SUPABASE_SECRET_KEY=                    # service-role key - server-side ONLY, never NEXT_PUBLIC_
 ```
 
 > ⚠️ The service-role key must **not** be prefixed with `NEXT_PUBLIC_`, or it would be inlined
@@ -33,17 +33,17 @@ SUPABASE_SECRET_KEY=                    # service-role key — server-side ONLY,
 
 ### Route Groups
 
-- `app/(auth)/` — sign-in / sign-up pages; no auth guard
-- `app/(root)/` — main app; layout guard redirects unauthenticated users to `/sign-in`
-- `app/(root)/[type]/` — file listing pages; `type` is `documents | images | media | others`
-- `app/api/download/[fileId]/` — authorized download; verifies session + owner/shared, then
+- `app/(auth)/` - sign-in / sign-up pages; no auth guard
+- `app/(root)/` - main app; layout guard redirects unauthenticated users to `/sign-in`
+- `app/(root)/[type]/` - file listing pages; `type` is `documents | images | media | others`
+- `app/api/download/[fileId]/` - authorized download; verifies session + owner/shared, then
   redirects to a short-lived signed download URL
-- `app/auth/callback/` — OAuth code exchange
-- `app/auth/confirm/` — email confirmation / OTP link handler
+- `app/auth/callback/` - OAuth code exchange
+- `app/auth/confirm/` - email confirmation / OTP link handler
 
 ### Supabase Client Pattern
 
-Three clients — **never swap them**:
+Three clients - **never swap them**:
 
 | Client | File | When to use |
 |---|---|---|
@@ -52,7 +52,7 @@ Three clients — **never swap them**:
 | Admin (service role) | `lib/supabase/server-client.ts` → `createAdminClient()` | Server Actions in `lib/actions/` (bypass RLS) |
 
 Session refresh lives in `lib/supabase/proxy.ts` (`updateSession`), invoked from the root
-`proxy.ts` — Next.js 16's middleware entry point.
+`proxy.ts` - Next.js 16's middleware entry point.
 
 ### Auth Flow
 
@@ -60,7 +60,7 @@ Session refresh lives in `lib/supabase/proxy.ts` (`updateSession`), invoked from
 client-side session state via `onAuthStateChange`. Methods: `signInEmailPassword`,
 `signUpEmailPassword`, `signInWithGoogle`, `signOut`.
 
-Server-side auth checks (layouts, route handlers) call `supabase.auth.getUser()` directly — they
+Server-side auth checks (layouts, route handlers) call `supabase.auth.getUser()` directly - they
 do **not** use `AuthContext`.
 
 ### Server Actions (`lib/actions/`)
@@ -68,33 +68,33 @@ do **not** use `AuthContext`.
 All file operations are Next.js Server Actions (`"use server"`) using `createAdminClient()`
 (service role), so they bypass RLS.
 
-- `file.actions.ts` — `uploadFile`, `getFiles`, `renameFile`, `updateFileUsers`, `deleteFile`,
+- `file.actions.ts` - `uploadFile`, `getFiles`, `renameFile`, `updateFileUsers`, `deleteFile`,
   `copyFile`, `removeMyAccess`, `getTotalSpaceUsed`
-- `user.actions.ts` — `getCurrentUser()` maps the Supabase auth user to `{ $id, email, fullName, avatar, accountId }`
-- `file-access.ts` — `hasFileAccess()`, the shared owner-or-shared read-access check used by
+- `user.actions.ts` - `getCurrentUser()` maps the Supabase auth user to `{ $id, email, fullName, avatar, accountId }`
+- `file-access.ts` - `hasFileAccess()`, the shared owner-or-shared read-access check used by
   both `copyFile` and `app/api/download/[fileId]/route.ts`. Not a Server Action itself (no
   `"use server"`), so a Route Handler can import it directly.
 
 **`mapFileRecord`** in `file.actions.ts` translates snake_case DB columns to the camelCase /
 `$`-prefixed fields the UI expects (`$id`, `bucketFileId`, `accountId`, `$createdAt`, `$updatedAt`)
-— a legacy of the original Appwrite document shape — and also computes `isSharedWithMe`
+- a legacy of the original Appwrite document shape - and also computes `isSharedWithMe`
 (`owner !== viewerId`) from an optional `viewerId` argument, so the UI can tell files you own
 apart from files shared with you.
 
 **Ownership enforcement:** `renameFile`, `updateFileUsers`, and `deleteFile` fold the
 `owner = current user` check directly into their `.update()`/`.delete()` query filter (a
 non-owner's `fileId` simply matches zero rows, surfaced as PostgREST's `PGRST116`) rather than
-doing a separate fetch-then-check — the client-supplied `file`/`fileId` is never trusted for
+doing a separate fetch-then-check - the client-supplied `file`/`fileId` is never trusted for
 authorization on its own.
 
 ### Database
 
 Single table: `public.files` (Postgres via Supabase). Full schema + RLS in `README.md`. Key columns:
 
-- `owner` — UUID FK to `auth.users(id)`
-- `bucket_file_id` — unique storage object path
-- `shared_with` — `text[]` of **email addresses** the file is shared with
-- `type` — one of `document | image | video | audio | other`
+- `owner` - UUID FK to `auth.users(id)`
+- `bucket_file_id` - unique storage object path
+- `shared_with` - `text[]` of **email addresses** the file is shared with
+- `type` - one of `document | image | video | audio | other`
 
 ### File URL Strategy
 

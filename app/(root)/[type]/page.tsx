@@ -1,4 +1,7 @@
+import { notFound, redirect } from "next/navigation";
+
 import { getFiles } from "@/lib/actions/file.actions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { convertFileSize, getFileTypesParams } from "@/lib/utils";
 
 import Sort from "@/components/Sort";
@@ -9,7 +12,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     const searchText = ((await searchParams)?.query as string) || "";
     const sort = ((await searchParams)?.sort as string) || "$createdAt-desc";
 
-    const types = getFileTypesParams(type) as FileType[];
+    // See the note in app/(root)/page.tsx: the layout's redirect does not stop this
+    // page from running, so it needs its own guard to keep the data layer from
+    // throwing on every logged-out request.
+    if (!(await getCurrentUser())) redirect("/sign-in");
+
+    const types = getFileTypesParams(type);
+    if (!types) notFound();
+
     const files = await getFiles({ types, searchText, sort });
 
     const totalFilesSize = (files?.documents ?? []).reduce(

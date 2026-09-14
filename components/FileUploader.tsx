@@ -41,16 +41,28 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
         });
       }
 
-      return uploadFile({ file, ownerId, accountId, path }).then((uploadedFile) => {
-        if (uploadedFile) {
-          setFiles((prevFiles) => prevFiles.filter((f) => f.name !== file.name));
-        }
-      });
+      // A rejected upload has to clear its own row too, otherwise the file sits in
+      // the "Uploading" list spinning forever with nothing telling the user why.
+      try {
+        await uploadFile({ file, ownerId, accountId, path });
+      } catch (error) {
+        toast({
+          description: (
+            <p className="body-2 text-white">
+              Could not upload <span className="font-semibold">{file.name}</span>
+              {error instanceof Error ? `: ${error.message}` : ""}
+            </p>
+          ),
+          className: "error-toast",
+        });
+      } finally {
+        setFiles((prevFiles) => prevFiles.filter((f) => f.name !== file.name));
+      }
     });
 
     await Promise.all(uploadPromises);
 
-  }, [ownerId, accountId, path]);
+  }, [ownerId, accountId, path, toast]);
 
   const { getRootProps, getInputProps } = useDropzone({ onDrop });
 

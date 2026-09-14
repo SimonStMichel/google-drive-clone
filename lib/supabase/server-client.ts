@@ -30,7 +30,7 @@ export async function createSupabaseServerClient() {
                         cookieStore.set(name, value, options)
                     );
                 } catch {
-                    // Called from a Server Component — cookie writes are a no-op
+                    // Called from a Server Component - cookie writes are a no-op
                 }
             },
         },
@@ -43,7 +43,7 @@ export async function createSessionClient() {
 }
 
 // Service-role client for privileged server operations (never sent to browser).
-// NOTE: the secret key MUST NOT be prefixed with NEXT_PUBLIC_ — that would inline
+// NOTE: the secret key MUST NOT be prefixed with NEXT_PUBLIC_ - that would inline
 // it into the client bundle and let anyone bypass RLS.
 export function createAdminClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
