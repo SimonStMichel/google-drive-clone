@@ -72,6 +72,9 @@ tutoriel. Concrètement :
 - Réécrire chaque Server Action (`lib/actions/file.actions.ts`) pour le nouveau schéma, et mettre
   l'application à jour de Next.js 15 à 16 au passage
 
+> **Note sur l'utilisation de l'IA :** des outils d'IA ont servi à réaliser la migration, afin
+> d'avancer plus efficacement et d'apprendre à travailler avec ce genre d'outils.
+
 **3. Aller au-delà du tutoriel.** Une fois la migration terminée, le modèle de partage a eu droit
 à une vraie révision de sécurité et d'expérience utilisateur que le tutoriel d'origine n'avait
 jamais eue :

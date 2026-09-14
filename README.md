@@ -70,6 +70,9 @@ from Appwrite to Supabase as a self-directed refactor - not part of the tutorial
 - Re-deriving every Server Action (`lib/actions/file.actions.ts`) against the new schema, and
   upgrading the app from Next.js 15 to 16 along the way
 
+> **Note on AI use:** AI tools were used to help carry out the migration, to move through it
+> more efficiently and to learn how to work with these kinds of tools.
+
 **3. Going beyond the tutorial.** With the migration done, the sharing model got a real security
 and UX pass that the original tutorial never had:
 - Found and closed a gap where any user a file was shared with could rename, delete, or
